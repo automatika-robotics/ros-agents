@@ -15,7 +15,7 @@ setup(
     maintainer="Automatika Robotics",
     maintainer_email="contact@automatikarobotics.com",
     description="Build embodied agents with ROS and local ML models",
-    license="TODO: License declaration",
+    license="MIT License Copyright (c) 2024 Automatika Robotics",
     tests_require=["pytest"],
     entry_points={
         "console_scripts": ["tiny_web_client = agents.chainlit_client.app:main"]
