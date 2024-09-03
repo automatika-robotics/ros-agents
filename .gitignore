@@ -96,7 +96,13 @@ ENV/
 # VSCode
 .vscode
 
+# ROS
+log/
+install/
+src/
+
 # custom
+shared/
 logdir/
 data/
 logs/
@@ -105,8 +111,14 @@ tmp/
 *.h5
 *.npz
 *.zip
-*.png
 *.ods
 *.xyz
 *.off
 *.obj
+
+# Ignores for web client
+.chainlit/
+
+# Ignores for Docs
+docs/Makefile
+docs/make.bat

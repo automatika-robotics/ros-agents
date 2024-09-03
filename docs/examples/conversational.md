@@ -1,0 +1,192 @@
+# Create a conversational agent with audio
+
+Often times robots are equipped with a speaker system and a microphone. Once these peripherals have been exposed through ROS, we can use ROS Agents to trivially create a conversational interface on the robot. Our conversational agent will use a multimodal LLM for contextual question/answering utilizing the camera onboard the robot. Furthermore, it will use speech-to-text and text-to-speech models for converting audio to text and vice versa. We will start by importing the relavent components that we want to string together.
+
+```python
+from agents.components import MLLM, SpeechToText, TextToSpeech
+```
+
+ [Components](../basics) are basic functional units in ROS Agents. Their inputs and outputs are defined using ROS [Topics](../basics). And their function can be any input transformation, for example the inference of an ML model. Lets setup these components one by one. Since our input to the robot would be speech, we will setup the speech-to-text component first.
+
+ ## SpeechToText Component
+ This component listens to input an audio input topic, that takes in a multibyte array of audio (captured in a ROS std_msgs message, which maps to Audio msg_type in ROS Sugar) and can publish output to a text topic. It can also be configured to get the audio stream from microphones on board our robot. With this configuration the component is always listening and uses a small Voice Activity Detection (VAD) model, [Silero-VAD](https://github.com/snakers4/silero-vad) to filter out any audio that is not speech. We will be using this configuration in our example. First we will setup our input and output topics and then create a config object which we can later pass to our component.
+
+
+```python
+from agents.ros import Topic
+from agents.config import SpeechToTextConfig
+
+# Define input and output topics (pay attention to msg_type)
+audio_in = Topic(name="audio0", msg_type="Audio")
+text_query = Topic(name="text0", msg_type="String")
+
+s2t_config = SpeechToTextConfig(enable_vad=True)  # option to always listen for speech through the microphone
+```
+```{note}
+With **enable_vad** set to **True**, the component automatically deploys [Silero-VAD](https://github.com/snakers4/silero-vad) by default in ONNX format. This model has a small footprint and can be easily deployed on the edge. However we need to install a couple of dependencies for this to work. These can be installed with `pip install torchaudio onnxruntime`
+```
+
+To initialize the component we also need a model client for a speech to text model. We will be using the HTTP client for RoboML for this purpose.
+
+```{note}
+RoboML is a aggregator library that provides a model serving aparatus for locally serving opensource ML models useful in robotics. Learn about setting up RoboML [here](https://www.github.com/automatika-robotics/roboml).
+```
+
+Additionally, we will use the client with a model called, Whisper, a popular opensource speech to text model from OpenAI for the purpose of this example. Lets see what the looks like in code.
+
+```python
+from agents.clients.roboml import HTTPModelClient
+from agents.models import Whisper
+
+# Setup the model client
+whisper = Whisper(name="whisper")  # Custom model init params can be provided here
+roboml_whisper = HTTPModelClient(whisper)
+
+# Initialize the component
+speech_to_text = SpeechToText(
+    inputs=[audio_in],  # the input topic we setup
+    outputs=[text_query], # the output topic we setup
+    model_client=roboml_whisper,
+    trigger=audio_in,
+    config=s2t_config  # pass in the config object
+)
+```
+The trigger parameter lets the component know that it has to perform its function (in this case model inference) when an input is received on this particular topic. In our configuration, the component will be triggered using voice activity detection on the continuous stream of audio being received on the microphone. Next we will setup our MLLM component.
+
+## MLLM Component
+The MLLM component takes as input a text topic (the output of the SpeechToText component) and an image topic, assuming we have a camera device onboard the robot publishing this topic. And just like before we need to provide a model client, this time with an MLLM model. This time we will use the OllamaClient along with Llava, a popular opensource multimodal LLM.
+
+```{note}
+Ollama is one of the most popular local LLM serving projects. Learn about setting up Ollama [here](https://ollama.com).
+```
+Here is the code for our MLLM setup.
+
+```python
+from agents.clients.ollama import OllamaClient
+from agents.models import Llava
+
+# Define the image input topic and a new text output topic
+image0 = Topic(name="image_raw", msg_type="Image")
+text_answer = Topic(name="text1", msg_type="String")
+
+# Define a model client (working with Ollama in this case)
+llava = Llava(name="llava")
+llava_client = OllamaClient(llava)
+
+# Define an MLLM component
+mllm = MLLM(
+    inputs=[text_query, image0],  # Notice the text input is the same as the output of the previous component
+    outputs=[text_answer],
+    model_client=llava_client,
+    trigger=text_query,
+    component_name="vqa" # We have also given our component an optional name
+)
+```
+
+We can further customize the our MLLM component by attaching a context prompt template. This can be done at the component level or at the level of a particular input topic. In this case we will attach a prompt template to the input topic **text_query**.
+
+```python
+# Attach a prompt template
+mllm.set_topic_prompt(text_query, template="""You are an amazing and funny robot.
+Answer the following about this image: {{ text0 }}"""
+)
+```
+Notice that the template is a jinja2 template string, where the actual name of the topic is set as a variable. For longer templates you can also write them to a file and provide its path when calling this function. After this we move on to setting up our last component.
+
+## TextToSpeech Component
+The TextToSpeech component setup will be very similar to the SpeechToText component. We will once again use a RoboML client, this time with the SpeechT5 model (opensource model from Microsoft). Furthermore, this component can be configured to play audio on a playback device available onboard the robot. We will utilize this option through our config. An output topic is optional for this component as we will be playing the audio directly on device.
+
+```python
+from agents.config import TextToSpeechConfig
+from agents.models import SpeechT5
+
+# config for playing audio on device
+t2s_config = TextToSpeechConfig(play_on_device=True)
+
+speecht5 = SpeechT5(name="speecht5")
+roboml_speecht5 = HTTPModelClient(speecht5)
+text_to_speech = TextToSpeech(
+    inputs=[text_answer],
+    trigger=text_answer,
+    model_client=roboml_speecht5,
+    config=t2s_config
+)
+```
+## Launching the Components
+The final step in this example is to launch the components. This is done by passing the defined components to the launcher and calling the **bringup** method.
+
+```python
+from agents.ros import Launcher
+
+# Launch the components
+launcher = Launcher(components=[speech_to_text, mllm, text_to_speech],
+                    activate_all_components_on_start=True)
+launcher.bringup()
+```
+
+Et voila! we have setup a graph of three components in less than 50 lines of well formatted code. The complete example is as follows:
+
+```{code-block} python
+:caption: Multimodal Audio Conversational Agent
+:linenos:
+from agents.components import MLLM, SpeechToText, TextToSpeech
+from agents.config import SpeechToTextConfig, TextToSpeechConfig
+from agents.clients.roboml import HTTPModelClient, OllamaClient
+from agents.models import Whisper, SpeechT5, Llava
+from agents.ros import Topic, Launcher
+
+audio_in = Topic(name="audio0", msg_type="Audio")
+text_query = Topic(name="text0", msg_type="String")
+
+whisper = Whisper(name="whisper")  # Custom model init params can be provided here
+roboml_whisper = HTTPModelClient(whisper)
+
+speech_to_text = SpeechToText(
+    inputs=[audio_in],
+    outputs=[text_query],
+    model_client=roboml_whisper,
+    trigger=audio_in,
+    config=SpeechToTextConfig(enable_vad=True)  # option to always listen for speech through the microphone
+)
+
+llava = Llava(name="llava")
+llava_client = OllamaClient(llava)
+
+mllm = MLLM(
+    inputs=[text_query, image0],
+    outputs=[text_answer],
+    model_client=llava_client,
+    trigger=text_query,
+    component_name="vqa"
+)
+
+# config for playing audio on device
+t2s_config = TextToSpeechConfig(play_on_device=True)
+
+speecht5 = SpeechT5(name="speecht5")
+roboml_speecht5 = HTTPModelClient(speecht5)
+text_to_speech = TextToSpeech(
+    inputs=[text_answer],
+    trigger=text_answer,
+    model_client=roboml_speecht5,
+    config=t2s_config
+)
+
+launcher = Launcher(components=[speech_to_text, mllm, text_to_speech],
+                    activate_all_components_on_start=True)
+launcher.bringup()
+```
+
+## Web Based Client for Interacting with the Robot
+
+To interact with text and audio based topics on the robot, ROS Agents includes a tiny browser based client made with [chainlit](https://chainlit.io/). This is useful if the robot does not have a microphone/speaker interface or if one wants to communicate with it remotely. The client can be launched as follows:
+
+```shell
+ros2 run ros-agents tiny_web_client
+```
+
+The client displays a web UI on http://localhost:8000. Open this address from browser. ROS input and output topic settings for text and audio topics can be configured from the web UI by pressing the settings icon.
+
+```{seealso}
+To customize the webapp, checkout how to set the configuration options for the [app](https://docs.chainlit.io/backend/config/overview) and the [UI](https://docs.chainlit.io/customisation/overview)
+```
