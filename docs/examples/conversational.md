@@ -131,7 +131,8 @@ Et voila! we have setup a graph of three components in less than 50 lines of wel
 :linenos:
 from agents.components import MLLM, SpeechToText, TextToSpeech
 from agents.config import SpeechToTextConfig, TextToSpeechConfig
-from agents.clients.roboml import HTTPModelClient, OllamaClient
+from agents.clients.roboml import HTTPModelClient
+from agents.clients.ollama import OllamaClient
 from agents.models import Whisper, SpeechT5, Llava
 from agents.ros import Topic, Launcher
 
@@ -148,6 +149,9 @@ speech_to_text = SpeechToText(
     trigger=audio_in,
     config=SpeechToTextConfig(enable_vad=True)  # option to always listen for speech through the microphone
 )
+
+image0 = Topic(name="image_raw", msg_type="Image")
+text_answer = Topic(name="text1", msg_type="String")
 
 llava = Llava(name="llava")
 llava_client = OllamaClient(llava)

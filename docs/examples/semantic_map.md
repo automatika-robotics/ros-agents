@@ -30,6 +30,7 @@ Learn about setting up RoboML with vision [here](https://www.github.com/automati
 ```python
 from agents.models import VisionModel
 from agents.clients.roboml import RESPModelClient
+from agents.config import VisionConfig
 
 # Add an object detection model
 object_detection = VisionModel(name="object_detection",
@@ -57,6 +58,7 @@ With large scale multimodal LLMs we can ask higher level introspective questions
 ```python
 from agents.clients.ollama import OllamaClient
 from agents.models import Llava
+from agents.ros import FixedInput
 
 # Define a model client (working with Ollama in this case)
 llava = Llava(name="llava")
@@ -75,7 +77,7 @@ introspector = MLLM(
     inputs=[introspection_query, image0],  # we use the image0 topic defined earlier
     outputs=[introspection_answer],
     model_client=llava_client,
-    trigger=15.0, # we provide the time interval as a float value to the trigger parameter
+    trigger=15.0,  # we provide the time interval as a float value to the trigger parameter
     component_name="introspector",
 )
 ```
@@ -85,6 +87,8 @@ LLM/MLLM model outputs can be unpredictable. Before publishing the answer of our
 ```python
 # Define an arbitrary function to validate the output of the introspective component
 # before publication.
+from typing import Optional
+
 def introspection_validation(output: str) -> Optional[str]:
     for option in ["office", "bedroom", "kitchen"]:
         if option in output.lower():
@@ -138,7 +142,7 @@ chroma = ChromaDB(name="MainDB")
 chroma_client = HTTPDBClient(db=chroma)
 
 # Create the map component
-map_conf = MapConfig(map_name="map") # We give our map a name
+map_conf = MapConfig(map_name="map")  # We give our map a name
 map = MapEncoding(
     layers=[layer1, layer2],
     position=position,
@@ -167,13 +171,14 @@ And that is it. We have created our spatio-temporal semantic map using the outpu
 ```{code-block} python
 :caption: Semantic Mapping with MapEncoding
 :linenos:
+from typing import Optional
 from agents.components import MapEncoding, Vision, MLLM
 from agents.models import VisionModel, Llava
 from agents.clients.roboml import RESPModelClient, HTTPDBClient
 from agents.clients.ollama import OllamaClient
-from agents.ros import Topic, MapLayer, Launcher
+from agents.ros import Topic, MapLayer, Launcher, FixedInput
 from agents.vectordbs import ChromaDB
-from agents.config import MapConfig
+from agents.config import MapConfig, VisionConfig
 
 # Define the image input topic
 image0 = Topic(name="image_raw", msg_type="Image")
@@ -201,6 +206,7 @@ vision = Vision(
 llava = Llava(name="llava")
 llava_client = OllamaClient(llava)
 
+
 # Define a fixed input for the component
 introspection_query = FixedInput(
     name="introspection_query", msg_type="String",
@@ -214,7 +220,7 @@ introspector = MLLM(
     inputs=[introspection_query, image0],  # we use the image0 topic defined earlier
     outputs=[introspection_answer],
     model_client=llava_client,
-    trigger=15.0, # we provide the time interval as a float value to the trigger parameter
+    trigger=15.0,  # we provide the time interval as a float value to the trigger parameter
     component_name="introspector",
 )
 
@@ -242,7 +248,7 @@ chroma = ChromaDB(name="MainDB")
 chroma_client = HTTPDBClient(db=chroma)
 
 # Create the map component
-map_conf = MapConfig(map_name="map") # We give our map a name
+map_conf = MapConfig(map_name="map")  # We give our map a name
 map = MapEncoding(
     layers=[layer1, layer2],
     position=position,

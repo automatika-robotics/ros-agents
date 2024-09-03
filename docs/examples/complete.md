@@ -41,8 +41,8 @@ speech_to_text = SpeechToText(
     outputs=[query_topic],
     model_client=whisper_client,
     trigger=audio_in,
-    config=SpeechToTextConfig(enable_vad=True)  # option to always listen for speech through the microphone
-    component_name="speech_to_text",
+    config=SpeechToTextConfig(enable_vad=True),  # option to always listen for speech through the microphone
+    component_name="speech_to_text"
 )
 
 # Setup a text to speech component
@@ -56,7 +56,7 @@ text_to_speech = TextToSpeech(
     inputs=[query_answer],
     trigger=query_answer,
     model_client=speecht5_client,
-    config=t2s_config
+    config=t2s_config,
     component_name="text_to_speech",
 )
 
@@ -205,7 +205,7 @@ router = SemanticRouter(
     routes=[llm_route, goto_route, mllm_route],
     default_route=llm_route,
     config=router_config,
-    db_client=chroma_client
+    db_client=chroma_client,
     component_name='router'
 )
 

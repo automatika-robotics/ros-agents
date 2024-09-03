@@ -2,7 +2,7 @@
 
 In this example we will use the output of an object detection component to enrich the prompt of an MLLM component. Let us start by importing the components.
 ```python
-from agents.components import VisionModel, MLLM
+from agents.components import Vision, MLLM
 ```
 
 ## Setting up the Object Detection Component
@@ -28,6 +28,7 @@ Checkout all available mmdetection models and their benchmarking results in the 
 ```python
 from agents.models import VisionModel
 from agents.clients.roboml import RESPModelClient, HTTPModelClient
+from agents.config import VisionConfig
 
 # Add an object detection model
 object_detection = VisionModel(name="object_detection",
@@ -105,9 +106,10 @@ And there we have it. Complete code of this example is provided below.
 ```{code-block} python
 :caption: Prompt Engineering with Object Detection
 :linenos:
-from agents.components import VisionModel, MLLM
+from agents.components import Vision, MLLM
 from agents.models import VisionModel, Idefics2
 from agents.clients.roboml import RESPModelClient, HTTPModelClient
+from agents.config import VisionConfig
 from agents.ros import Topic, Launcher
 
 image0 = Topic(name="image_raw", msg_type="Image")
