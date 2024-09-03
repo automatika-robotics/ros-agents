@@ -1,0 +1,69 @@
+from typing import Optional
+import json
+import numpy as np
+from agents.components import LLM
+from agents.models import Llama3_1
+from agents.vectordbs import ChromaDB
+from agents.config import LLMConfig
+from agents.clients.roboml import HTTPDBClient
+from agents.clients.ollama import OllamaClient
+from agents.ros import Launcher, Topic
+
+# Start a Llama3.1 based llm component using ollama client
+llama = Llama3_1(name="llama")
+llama_client = OllamaClient(llama)
+
+# Initialize a vector DB that will store our routes
+chroma = ChromaDB(name="MainDB")
+chroma_client = HTTPDBClient(db=chroma)
+
+# Define LLM input and output topics including goal_point topic of type PoseStamped
+goto_in = Topic(name="goto_in", msg_type="String")
+goal_point = Topic(name="goal_point", msg_type="PoseStamped")
+
+config = LLMConfig(
+    enable_rag=True,
+    collection_name="map",
+    distance_func="l2",
+    n_results=1,
+    add_metadata=True,
+)
+
+# initialize the component
+goto = LLM(
+    inputs=[goto_in],
+    outputs=[goal_point],
+    model_client=llama_client,
+    db_client=chroma_client,  # check the previous example where we setup this database client
+    trigger=goto_in,
+    component_name="go_to_x",
+)
+
+# set a component prompt
+goto.set_component_prompt(
+    template="""From the given metadata, extract coordinates and provide
+    the coordinates in the following json format:\n {"position": coordinates}"""
+)
+
+
+# pre-process the output before publishing to a topic of msg_type PoseStamped
+def llm_answer_to_goal_point(output: str) -> Optional[np.ndarray]:
+    # extract the json part of the output string (including brackets)
+    # one can use sophisticated regex parsing here but we'll keep it simple
+    json_string = output[output.find("{") : output.find("}") + 1]
+
+    # load the string as a json and extract position coordinates
+    # if there is an error, return None, i.e. no output would be published to goal_point
+    try:
+        json_dict = json.loads(json_string)
+        return np.array(json_dict["position"])
+    except Exception:
+        return
+
+
+# add the pre-processing function to the goal_point output topic
+goto.add_publisher_preprocessor(goal_point, llm_answer_to_goal_point)
+
+# Launch the component
+launcher = Launcher(components=[goto], activate_all_components_on_start=True)
+launcher.bringup()

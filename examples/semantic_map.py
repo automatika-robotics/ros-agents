@@ -1,0 +1,95 @@
+from typing import Optional
+from agents.components import MapEncoding, Vision, MLLM
+from agents.models import VisionModel, Llava
+from agents.clients.roboml import RESPModelClient, HTTPDBClient
+from agents.clients.ollama import OllamaClient
+from agents.ros import Topic, MapLayer, Launcher, FixedInput
+from agents.vectordbs import ChromaDB
+from agents.config import MapConfig, VisionConfig
+
+# Define the image input topic
+image0 = Topic(name="image_raw", msg_type="Image")
+# Create a detection topic
+detections_topic = Topic(name="detections", msg_type="Detections")
+
+# Add an object detection model
+object_detection = VisionModel(
+    name="object_detection", checkpoint="dino-4scale_r50_8xb2-12e_coco"
+)
+roboml_detection = RESPModelClient(object_detection)
+
+# Initialize the Vision component
+detection_config = VisionConfig(threshold=0.5)
+vision = Vision(
+    inputs=[image0],
+    outputs=[detections_topic],
+    trigger=image0,
+    config=detection_config,
+    model_client=roboml_detection,
+    component_name="detection_component",
+)
+
+
+# Define a model client (working with Ollama in this case)
+llava = Llava(name="llava")
+llava_client = OllamaClient(llava)
+
+# Define a fixed input for the component
+introspection_query = FixedInput(
+    name="introspection_query",
+    msg_type="String",
+    fixed="What kind of a room is this? Is it an office, a bedroom or a kitchen? Give a one word answer, out of the given choices",
+)
+# Define output of the component
+introspection_answer = Topic(name="introspection_answer", msg_type="String")
+
+# Start a timed (periodic) component using the mllm model defined earlier
+# This component answers the same question after every 15 seconds
+introspector = MLLM(
+    inputs=[introspection_query, image0],  # we use the image0 topic defined earlier
+    outputs=[introspection_answer],
+    model_client=llava_client,
+    trigger=15.0,  # we provide the time interval as a float value to the trigger parameter
+    component_name="introspector",
+)
+
+
+# Define an arbitrary function to validate the output of the introspective component
+# before publication.
+def introspection_validation(output: str) -> Optional[str]:
+    for option in ["office", "bedroom", "kitchen"]:
+        if option in output.lower():
+            return option
+
+
+introspector.add_publisher_preprocessor(introspection_answer, introspection_validation)
+
+# Object detection output from vision component
+layer1 = MapLayer(subscribes_to=detections_topic, temporal_change=True)
+# Introspection output from mllm component
+layer2 = MapLayer(subscribes_to=introspection_answer, resolution_multiple=3)
+
+# Initialize mandatory topics defining the robots localization in space
+position = Topic(name="odom", msg_type="Odometry")
+map_meta_data = Topic(name="map_meta_data", msg_type="MapMetaData")
+
+# Initialize a vector DB that will store our semantic map
+chroma = ChromaDB(name="MainDB")
+chroma_client = HTTPDBClient(db=chroma)
+
+# Create the map component
+map_conf = MapConfig(map_name="map")  # We give our map a name
+map = MapEncoding(
+    layers=[layer1, layer2],
+    position=position,
+    map_meta_data=map_meta_data,
+    config=map_conf,
+    db_client=chroma_client,
+    trigger=15.0,
+)
+
+# Launch the components
+launcher = Launcher(
+    components=[vision, introspector, map], activate_all_components_on_start=True
+)
+launcher.bringup()
