@@ -4,7 +4,7 @@ package_name = "agents"
 
 setup(
     name=package_name,
-    version="0.1.1",
+    version="0.1.1a",
     packages=find_packages(exclude=["tests"]),
     data_files=[
         ("share/ament_index/resource_index/packages", ["resource/" + package_name]),
