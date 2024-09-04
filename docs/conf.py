@@ -1,17 +1,12 @@
 # Configuration file for the Sphinx documentation builder.
 import os
 import sys
-import subprocess
 from datetime import date
+import xml.etree.ElementTree as ET
 
 sys.path.insert(0, os.path.abspath(".."))
-version = (
-    subprocess.run(
-        ["ros2", "pkg", "xml", "agents", "--tag", "version"], stdout=subprocess.PIPE
-    )
-    .stdout.decode("utf-8")
-    .strip()
-)
+version = ET.parse("../agents/package.xml").getroot()[1].text
+print("Found version:", version)
 
 project = "ROS Agents"
 copyright = f"{date.today().year}, Automatika Robotics"
