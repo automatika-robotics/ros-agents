@@ -4,7 +4,16 @@ import numpy as np
 
 from ..clients.db_base import DBClient
 from ..config import MapConfig
-from ..ros import FixedInput, MapMetaData, Odometry, String, Topic, Detections, MapLayer
+from ..ros import (
+    FixedInput,
+    MapMetaData,
+    Odometry,
+    String,
+    Topic,
+    Detections,
+    MapLayer,
+    component_action,
+)
 from ..utils import validate_func_args
 from .component_base import Component, ComponentRunType
 
@@ -60,6 +69,23 @@ class MapEncoding(Component):
         callback_group=None,
         **kwargs,
     ):
+        """__init__.
+
+        :param layers:
+        :type layers: list[MapLayer]
+        :param position:
+        :type position: Topic
+        :param map_meta_data:
+        :type map_meta_data: Topic
+        :param config:
+        :type config: MapConfig
+        :param db_client:
+        :type db_client: DBClient
+        :param trigger:
+        :type trigger: Union[Topic, list[Topic], float]
+        :param callback_group:
+        :param kwargs:
+        """
         self.config: MapConfig = config
         self.allowed_inputs = {
             "Required": [String, Odometry, MapMetaData],
@@ -80,6 +106,7 @@ class MapEncoding(Component):
         )
 
     def activate(self):
+        """activate."""
         self.get_logger().debug(f"Current Status: {self.health_status.value}")
         # initialize db client
         self.db_client._check_connection()
@@ -91,9 +118,10 @@ class MapEncoding(Component):
         # fill out pre-defined points in layers
         for layer in self.layers_dict.values():
             if layer.pre_defined and len(layer.pre_defined) > 0:
-                self._fill_out_pre_defined(layer)
+                self._fill_out_pre_defined(layer, layer.pre_defined)
 
     def deactivate(self):
+        """deactivate."""
         # deactivate the rest
         super().deactivate()
 
@@ -101,11 +129,17 @@ class MapEncoding(Component):
         self.db_client._check_connection()
         self.db_client._deinitialize()
 
-    def _fill_out_pre_defined(self, layer: MapLayer) -> None:
+    def _fill_out_pre_defined(
+        self,
+        layer: MapLayer,
+        points: Union[list[tuple[np.ndarray, str]], tuple[np.ndarray, str]],
+    ) -> None:
         """Fill out any pre-defined points in the MapLayer.
 
         :param layer:
         :type layer: MapLayer
+        :param points:
+        :type points: list[tuple[np.ndarray, str]] | tuple[np.ndarray, str]
         :rtype: None
         """
         time_stamp = self.get_ros_time().sec
@@ -118,10 +152,15 @@ class MapEncoding(Component):
             "documents": [],
             "metadatas": [],
         }
+
+        # create a list in case of one point
+        if not isinstance(points, list):
+            points = [points]
+
         # add pre_defined points
-        for data in layer.pre_defined:
+        for data in points:
             coordinates_string = np.array2string(data[0], separator=",")[1:-1]
-            # Create metadata, layer name is static and temporal_change remains false
+            # Create metadata
             metadata = {
                 "layer_name": layer_name,
                 "coordinates": coordinates_string,
@@ -274,6 +313,19 @@ class MapEncoding(Component):
         self.callbacks = {
             input.name: input.msg_type.callback(input) for input in all_inputs
         }
+
+    @component_action
+    def add_point(self, layer: MapLayer, point: tuple[np.ndarray, str]) -> None:
+        """Component action to add a user defined point to the map collection.
+        This action can be executed on an event.
+
+        :param layer: Layer to which the point should be added
+        :type layer: MapLayer
+        :param point: A tuple of position (numpy array) and text data (str)
+        :type point: tuple[np.ndarray, str]
+        :rtype: None
+        """
+        self._fill_out_pre_defined(layer, point)
 
     def inputs(self, inputs: list[Union[Topic, FixedInput]]):
         raise NotImplementedError(

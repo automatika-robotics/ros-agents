@@ -29,6 +29,7 @@ from ros_sugar.base_attrs import BaseAttrs
 from ros_sugar.config import BaseComponentConfig, ComponentRunType
 from ros_sugar.component import BaseComponent
 from ros_sugar.launcher import Launcher
+from ros_sugar.utils import component_action
 
 # LEIBNIZ TYPES
 from agents_interfaces.msg import Point2D, Bbox2D, Detection2D, Detections2D
@@ -53,6 +54,7 @@ __all__ = [
     "BaseComponentConfig",
     "ComponentRunType",
     "Launcher",
+    "component_action",
     "MapLayer",
     "Route",
 ]
@@ -289,7 +291,6 @@ class MapLayer(BaseAttrs):
     ```
     """
 
-    # TODO: Add validator to subscribes_to
     subscribes_to: Topic = field()
     temporal_change: bool = field(default=False)
     resolution_multiple: int = field(
@@ -314,6 +315,5 @@ class Route(BaseAttrs):
     ```
     """
 
-    # TODO: Add validator to routes_to
     routes_to: Topic = field()
     samples: list[str] = field()
