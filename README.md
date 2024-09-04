@@ -15,13 +15,13 @@ ROS Agents is a fully-loaded framework for creating interactive embodied agents 
 > [!NOTE]
 > This is an alpha release of ROS Agents. Breaking changes are to be expected.
 
-Checkout [Installation Instructions](docs/installation.md) 🛠️
+Checkout [Installation Instructions](https://automatika-robotics.github.io/ros-agents/installation.html) 🛠️
 
-Get started with the [Quickstart Guide](docs/quickstart.md) 🚀
+Get started with the [Quickstart Guide](https://automatika-robotics.github.io/ros-agents/quickstart.html) 🚀
 
-Get familiar with [Basic Concepts](docs/basics.md) 📚
+Get familiar with [Basic Concepts](https://automatika-robotics.github.io/ros-agents/basics.html) 📚
 
-Dive right in with [Examples](docs/examples/index.md) ✨
+Dive right in with [Examples](https://automatika-robotics.github.io/ros-agents/examples/index.html) ✨
 
 ## Installation 🛠️
 
@@ -33,7 +33,7 @@ ROS Agents is built to be used with ROS2. All ROS distributions starting from _I
 
 #### Install a model serving platform
 
-The core of ROS Agents is agnostic to model serving platforms. It currently supports [Ollama](https://ollama.com) and [RoboML](https://github.com/automatika-robotics/RoboML). Please install either of these by following the instructions provided by respective projects. Support for new platforms will be continuously added. If you would like to support a particular platform, please open an issue/PR.
+The core of ROS Agents is agnostic to model serving platforms. It currently supports [Ollama](https://ollama.com) and [RoboML](https://github.com/automatika-robotics/robo-ml). Please install either of these by following the instructions provided by respective projects. Support for new platforms will be continuously added. If you would like to support a particular platform, please open an issue/PR.
 
 ### Install ROS Agents (Ubuntu)
 
