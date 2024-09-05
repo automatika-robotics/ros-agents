@@ -23,7 +23,7 @@ text_query = Topic(name="text0", msg_type="String")
 s2t_config = SpeechToTextConfig(enable_vad=True)  # option to always listen for speech through the microphone
 ```
 ```{note}
-With **enable_vad** set to **True**, the component automatically deploys [Silero-VAD](https://github.com/snakers4/silero-vad) by default in ONNX format. This model has a small footprint and can be easily deployed on the edge. However we need to install a couple of dependencies for this to work. These can be installed with `pip install torchaudio onnxruntime`
+With **enable_vad** set to **True**, the component automatically deploys [Silero-VAD](https://github.com/snakers4/silero-vad) by default in ONNX format. This model has a small footprint and can be easily deployed on the edge. However we need to install a couple of dependencies for this to work. These can be installed with: `pip install pyaudio torchaudio onnxruntime`
 ```
 
 To initialize the component we also need a model client for a speech to text model. We will be using the HTTP client for RoboML for this purpose.
@@ -32,7 +32,7 @@ To initialize the component we also need a model client for a speech to text mod
 RoboML is a aggregator library that provides a model serving aparatus for locally serving opensource ML models useful in robotics. Learn about setting up RoboML [here](https://www.github.com/automatika-robotics/roboml).
 ```
 
-Additionally, we will use the client with a model called, Whisper, a popular opensource speech to text model from OpenAI for the purpose of this example. Lets see what the looks like in code.
+Additionally, we will use the client with a model called, Whisper, a popular opensource speech to text model from OpenAI. Lets see what the looks like in code.
 
 ```python
 from agents.clients.roboml import HTTPModelClient
@@ -95,6 +95,10 @@ Notice that the template is a jinja2 template string, where the actual name of t
 
 ## TextToSpeech Component
 The TextToSpeech component setup will be very similar to the SpeechToText component. We will once again use a RoboML client, this time with the SpeechT5 model (opensource model from Microsoft). Furthermore, this component can be configured to play audio on a playback device available onboard the robot. We will utilize this option through our config. An output topic is optional for this component as we will be playing the audio directly on device.
+
+```{note}
+In order to utilize _play_on_device_ you need to install a couple of dependencies as follows: `pip install soundfile sounddevice`
+```
 
 ```python
 from agents.config import TextToSpeechConfig
