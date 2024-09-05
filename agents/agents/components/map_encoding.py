@@ -67,6 +67,7 @@ class MapEncoding(Component):
         db_client: DBClient,
         trigger: Union[Topic, list[Topic], float] = 10.0,
         callback_group=None,
+        component_name="map_encoder_component",
         **kwargs,
     ):
         self.config: MapConfig = config
@@ -84,7 +85,7 @@ class MapEncoding(Component):
             config,
             trigger,
             callback_group,
-            self.config.map_name,
+            component_name,
             **kwargs,
         )
 
