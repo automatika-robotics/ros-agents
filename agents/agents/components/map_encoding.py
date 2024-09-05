@@ -69,23 +69,6 @@ class MapEncoding(Component):
         callback_group=None,
         **kwargs,
     ):
-        """__init__.
-
-        :param layers:
-        :type layers: list[MapLayer]
-        :param position:
-        :type position: Topic
-        :param map_meta_data:
-        :type map_meta_data: Topic
-        :param config:
-        :type config: MapConfig
-        :param db_client:
-        :type db_client: DBClient
-        :param trigger:
-        :type trigger: Union[Topic, list[Topic], float]
-        :param callback_group:
-        :param kwargs:
-        """
         self.config: MapConfig = config
         self.allowed_inputs = {
             "Required": [String, Odometry, MapMetaData],
