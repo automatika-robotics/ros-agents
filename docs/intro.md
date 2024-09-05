@@ -6,7 +6,7 @@ ROS Agents is a fully-loaded framework for creating interactive embodied agents 
 
 - **Agents in the real world:** Designed to be used with autonomous robot systems that operate in dynamic environments, specifically AMRs.
 - **Intuitive API**: Simple pythonic API to utilize local or cloud based ML models (specifically **Multimodal LLMs** and other **Transformer Architectures**) on robots.
-- **Semantic Memory**: Integrates vector databases, semantic routing and other supporting components to quickly build arbitrarily complex graphs for agentic information flow.
+- **Semantic Memory**: Integrates vector databases, semantic routing and other supporting components to quickly build arbitrarily complex graphs for agentic information flow. No need to utilize bloated "GenAI" frameworks on your robot.
 - **Made in ROS2**: Utilizes ROS2 as the underlying distributed communications backbone. Theoretically, all devices that provide a ROS2 package can be utilized to send data to ML models, as long as the datatype callback has been implemented.
 
 ```{note}
