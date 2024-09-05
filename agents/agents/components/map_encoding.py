@@ -126,6 +126,10 @@ class MapEncoding(Component):
         :type points: list[tuple[np.ndarray, str]] | tuple[np.ndarray, str]
         :rtype: None
         """
+        self.get_logger().info(
+            f"Adding points to map colletion: {self.config.map_name}"
+        )
+
         time_stamp = self.get_ros_time().sec
         layer_name = layer.subscribes_to.name
 
