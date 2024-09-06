@@ -28,8 +28,6 @@ class ModelClient(ABC):
         :param port:
         :type port: Optional[int]
         :param inference_timeout:
-        :param init_on_activation:
-        :type init_on_activation: bool
         :type inference_timeout: int
         :param logging_level:
         :type logging_level: str

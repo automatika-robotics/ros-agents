@@ -45,13 +45,21 @@ class HTTPModelClient(ModelClient):
         host: str = "127.0.0.1",
         port: int = 8000,
         inference_timeout: int = 30,
+        init_on_activation: bool = True,
         logging_level: str = "info",
     ):
         if isinstance(model, OllamaModel):
             raise TypeError(
                 "An ollama model cannot be passed to a RoboML client. Please use the OllamaClient"
             )
-        super().__init__(model, host, port, inference_timeout, logging_level)
+        super().__init__(
+            model=model,
+            host=host,
+            port=port,
+            inference_timeout=inference_timeout,
+            init_on_activation=init_on_activation,
+            logging_level=logging_level,
+        )
         self.url = f"http://{self.host}:{self.port}"
         self._check_connection()
 
@@ -169,9 +177,16 @@ class HTTPDBClient(DBClient):
         host: str = "127.0.0.1",
         port: int = 8000,
         response_timeout: int = 30,
+        init_on_activation: bool = True,
         logging_level: str = "info",
     ):
-        super().__init__(db, host, port, logging_level)
+        super().__init__(
+            db=db,
+            host=host,
+            port=port,
+            init_on_activation=init_on_activation,
+            logging_level=logging_level,
+        )
         self.url = f"http://{self.host}:{self.port}"
         self.response_timeout = response_timeout
         self._check_connection()
@@ -338,13 +353,21 @@ class RESPModelClient(ModelClient):
         host: str = "127.0.0.1",
         port: int = 6379,
         inference_timeout: int = 30,
+        init_on_activation: bool = True,
         logging_level: str = "info",
     ):
         if isinstance(model, OllamaModel):
             raise TypeError(
                 "An ollama model cannot be passed to a RoboML client. Please use the OllamaClient"
             )
-        super().__init__(model, host, port, inference_timeout, logging_level)
+        super().__init__(
+            model=model,
+            host=host,
+            port=port,
+            inference_timeout=inference_timeout,
+            init_on_activation=init_on_activation,
+            logging_level=logging_level,
+        )
         # TODO: handle timeoout
         self.redis = Redis(self.host, port=self.port)
         self._check_connection()
@@ -476,9 +499,16 @@ class RESPDBClient(DBClient):
         db: DB,
         host: str = "127.0.0.1",
         port: int = 6379,
+        init_on_activation: bool = True,
         logging_level: str = "info",
     ):
-        super().__init__(db, host, port, logging_level)
+        super().__init__(
+            db=db,
+            host=host,
+            port=port,
+            init_on_activation=init_on_activation,
+            logging_level=logging_level,
+        )
         # TODO: handle timeout
         self.redis = Redis(self.host, port=self.port)
         self._check_connection()

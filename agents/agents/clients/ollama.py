@@ -18,6 +18,7 @@ class OllamaClient(ModelClient):
         host: str = "127.0.0.1",
         port: int = 11434,
         inference_timeout: int = 30,
+        init_on_activation: bool = True,
         logging_level: str = "info",
     ):
         self.model: LLM = model
@@ -30,7 +31,14 @@ class OllamaClient(ModelClient):
             raise ModuleNotFoundError(
                 "In order to use the OllamaClient, you need ollama-python package installed. You can install it with 'pip install ollama'"
             ) from e
-        super().__init__(model, host, port, inference_timeout, logging_level)
+        super().__init__(
+            model=model,
+            host=host,
+            port=port,
+            inference_timeout=inference_timeout,
+            init_on_activation=init_on_activation,
+            logging_level=logging_level,
+        )
         self._check_connection()
 
     def _check_connection(self) -> None:
