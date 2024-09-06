@@ -110,8 +110,8 @@ class SemanticRouter(Component):
     def activate(self):
         self.get_logger().debug(f"Current Status: {self.health_status.value}")
         # initialize db client
-        self.db_client._check_connection()
-        self.db_client._initialize()
+        self.db_client.check_connection()
+        self.db_client.initialize()
 
         # activate the rest
         super().activate()
@@ -124,8 +124,8 @@ class SemanticRouter(Component):
         super().deactivate()
 
         # deactivate db client
-        self.db_client._check_connection()
-        self.db_client._deinitialize()
+        self.db_client.check_connection()
+        self.db_client.deinitialize()
 
     def _initialize_routes(self):
         """Create routes by saving route samples in the database."""
@@ -142,7 +142,7 @@ class SemanticRouter(Component):
             if idx == 0:
                 route_to_add["reset_collection"] = True
 
-            self.db_client._add(route_to_add)
+            self.db_client.add(route_to_add)
 
     def _execution_step(self, **kwargs):
         """Execution step for Semantic Router component.
@@ -161,7 +161,7 @@ class SemanticRouter(Component):
             "query": trigger_query,
             "n_results": 1,
         }
-        result = self.db_client._query(db_input)
+        result = self.db_client.query(db_input)
 
         # TODO: Add treatment of multiple results by using an averaging function
         if result:

@@ -17,7 +17,7 @@ class ModelClient(ABC):
         host: Optional[str] = None,
         port: Optional[int] = None,
         inference_timeout: int = 30,
-        init_model: bool = True,
+        init_on_activation: bool = True,
         logging_level: str = "info",
     ):
         """__init__.
@@ -28,6 +28,8 @@ class ModelClient(ABC):
         :param port:
         :type port: Optional[int]
         :param inference_timeout:
+        :param init_on_activation:
+        :type init_on_activation: bool
         :type inference_timeout: int
         :param logging_level:
         :type logging_level: str
@@ -36,7 +38,7 @@ class ModelClient(ABC):
         self.model_type = model.__class__.__name__
         self.host = host
         self.port = port
-        self.init_model = init_model
+        self.init_on_activation = init_on_activation
         self.logger = logging.get_logger(self.model.name)
         logging.set_logger_level(
             self.model.name, logging.get_logging_severity_from_string(logging_level)
@@ -48,13 +50,13 @@ class ModelClient(ABC):
         """initialize.
         :rtype: None
         """
-        self.check_connection()
+        self._check_connection()
 
     def initialize(self) -> None:
         """initialize.
         :rtype: None
         """
-        if self.init_model:
+        if self.init_on_activation:
             self._initialize()
 
     def inference(self, inference_input: dict[str, Any]) -> Optional[dict]:
@@ -63,13 +65,13 @@ class ModelClient(ABC):
         :type inference_input: dict[str, Any]
         :rtype: dict | None
         """
-        self._inference(inference_input)
+        return self._inference(inference_input)
 
     def deinitialize(self):
         """deinitialize."""
         # TODO: Add check for model initialization by keeping model
         # state in client
-        if self.init_model:
+        if self.init_on_activation:
             self._deinitialize()
 
     @abstractmethod

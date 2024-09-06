@@ -97,8 +97,8 @@ class LLM(ModelComponent):
     def activate(self):
         # initialize db client
         if self.db_client:
-            self.db_client._check_connection()
-            self.db_client._initialize()
+            self.db_client.check_connection()
+            self.db_client.initialize()
 
         # activate the rest
         super().activate()
@@ -109,8 +109,8 @@ class LLM(ModelComponent):
 
         # deactivate db client
         if self.db_client:
-            self.db_client._check_connection()
-            self.db_client._deinitialize()
+            self.db_client.check_connection()
+            self.db_client.deinitialize()
 
     @validate_func_args
     def add_documents(
@@ -143,7 +143,7 @@ class LLM(ModelComponent):
             "documents": documents,
             "metadatas": metadatas,
         }
-        self.db_client._add(db_input)
+        self.db_client.add(db_input)
 
     def _make_rag_query(self, query: str) -> Optional[str]:
         """Retreive documents for RAG.
@@ -161,7 +161,7 @@ class LLM(ModelComponent):
             "query": query,
             "n_results": self.config.n_results,
         }
-        result = self.db_client._query(db_input)
+        result = self.db_client.query(db_input)
         if result:
             # add metadata as string if asked
             rag_docs = (

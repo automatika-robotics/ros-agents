@@ -93,8 +93,8 @@ class MapEncoding(Component):
         """activate."""
         self.get_logger().debug(f"Current Status: {self.health_status.value}")
         # initialize db client
-        self.db_client._check_connection()
-        self.db_client._initialize()
+        self.db_client.check_connection()
+        self.db_client.initialize()
 
         # activate the rest
         super().activate()
@@ -110,8 +110,8 @@ class MapEncoding(Component):
         super().deactivate()
 
         # deactivate db client
-        self.db_client._check_connection()
-        self.db_client._deinitialize()
+        self.db_client.check_connection()
+        self.db_client.deinitialize()
 
     def _fill_out_pre_defined(
         self,
@@ -165,7 +165,7 @@ class MapEncoding(Component):
             to_be_added["documents"].append(data[1])
             to_be_added["metadatas"].append(metadata)
 
-        self.db_client._add(to_be_added)
+        self.db_client.add(to_be_added)
 
     def _get_layer_data(
         self, time_stamp, map_coordinates
@@ -266,9 +266,9 @@ class MapEncoding(Component):
             return
 
         if to_be_added:
-            self.db_client._add(to_be_added)
+            self.db_client.add(to_be_added)
         if to_be_checked:
-            self.db_client._conditional_add(to_be_checked)
+            self.db_client.conditional_add(to_be_checked)
 
     def _get_map_coordinates(
         self, position: np.ndarray, map_meta_data: dict
