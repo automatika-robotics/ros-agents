@@ -49,8 +49,8 @@ class ModelComponent(Component):
 
         # Initialize model
         if self.model_client:
-            self.model_client._check_connection()
-            self.model_client._initialize()
+            self.model_client.check_connection()
+            self.model_client.initialize()
 
         # Activate component
         super().activate()
@@ -64,8 +64,8 @@ class ModelComponent(Component):
 
         # Deinitialize model
         if self.model_client:
-            self.model_client._check_connection()
-            self.model_client._deinitialize()
+            self.model_client.check_connection()
+            self.model_client.deinitialize()
 
     def _validate_output_topics(self) -> None:
         """
@@ -118,7 +118,7 @@ class ModelComponent(Component):
 
         # conduct inference
         if self.model_client:
-            result = self.model_client._inference(inference_input)
+            result = self.model_client.inference(inference_input)
             # raise a fallback trigger via health status
             if not result:
                 self.health_status.set_failure()

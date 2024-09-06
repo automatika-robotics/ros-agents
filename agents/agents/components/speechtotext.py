@@ -234,7 +234,7 @@ class SpeechToText(ModelComponent):
 
         # conduct inference
         if self.model_client:
-            result = self.model_client._inference(inference_input)
+            result = self.model_client.inference(inference_input)
             # raise a fallback trigger via health status
             if not result:
                 self.health_status.set_failure()
