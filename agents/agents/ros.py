@@ -5,7 +5,7 @@ import numpy as np
 from attrs import define, field, Factory
 
 # FROM AUTOROS
-from auto_ros.supported_types import (
+from ros_sugar.supported_types import (
     SupportedType,
     Audio,
     Image,
@@ -14,7 +14,7 @@ from auto_ros.supported_types import (
     String,
     ROSImage,
 )
-from auto_ros.topic import (
+from ros_sugar.topic import (
     BaseTopic,
     QoSConfig,
     _normalize_topic_name,
@@ -63,7 +63,7 @@ __all__ = [
 def get_msg_type_extra(
     type_name: Union[type[supported_types.SupportedType], str],
 ) -> Union[type[supported_types.SupportedType], str]:
-    """Closure around verification function in auto_ros to provide additional types."""
+    """Closure around verification function in ros_sugar to provide additional types."""
     return get_msg_type(
         type_name, additional_types=[Video, Detection, Detections, Tracking, Trackings]
     )

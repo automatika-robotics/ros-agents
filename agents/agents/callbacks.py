@@ -2,7 +2,7 @@ from typing import Optional
 import os
 import cv2
 import numpy as np
-from auto_ros.callbacks import (
+from ros_sugar.callbacks import (
     GenericCallback,
     TextCallback,
     _image_pre_processing,

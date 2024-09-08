@@ -32,10 +32,9 @@ Install python dependencies
 pip install -U pillow numpy opencv-python-headless hiredis msgpack msgpack_numpy 'attrs>=23.2.0'`
 ```
 
-Download ROS Sugar and Automatika ROS (common utils) packages.
+Download ROS Sugar.
 ```shell
 git clone https://github.com/automatika-robotics/ros-sugar
-git clone https://github.com/automatika-robotics/automatika-ros
 ```
 ### Install ROS Agents
 ```shell
