@@ -15,12 +15,12 @@ from ros_sugar.supported_types import (
     ROSImage,
 )
 from ros_sugar.topic import (
-    BaseTopic,
     QoSConfig,
     _normalize_topic_name,
     supported_types,
     get_all_msg_types,
     get_msg_type,
+    Topic as BaseTopic,
 )
 
 # FROM ROS_SUGAR
