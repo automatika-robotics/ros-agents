@@ -71,7 +71,7 @@ class Vision(ModelComponent):
             inputs,
             outputs,
             model_client,
-            config,
+            self.config,
             trigger,
             callback_group,
             component_name,

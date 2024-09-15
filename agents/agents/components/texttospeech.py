@@ -81,18 +81,26 @@ class TextToSpeech(ModelComponent):
             inputs,
             outputs,
             model_client,
-            config,
+            self.config,
             trigger,
             callback_group,
             component_name,
             **kwargs,
         )
-        self.queue = queue.Queue(maxsize=self.config.buffer_size)
-        self.event = threading.Event()
+
+    def activate(self):
+        # Activate component
+        super().activate()
+
+        # If VAD is enabled, start a listening stream on a separate thread
+        if self.config.play_on_device:
+            self.queue = queue.Queue(maxsize=self.config.buffer_size)
+            self.event = threading.Event()
 
     def deactivate(self):
-        # If play_on_device is enabled, stop the playing stream thread
-        self.event.set()
+        if self.config.play_on_device:
+            # If play_on_device is enabled, stop the playing stream thread
+            self.event.set()
 
         # Deactivate component
         super().deactivate()
