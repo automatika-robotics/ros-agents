@@ -314,8 +314,3 @@ class MapEncoding(Component):
         :rtype: None
         """
         self._fill_out_pre_defined(layer, point)
-
-    def inputs(self, inputs: list[Union[Topic, FixedInput]]):
-        raise NotImplementedError(
-            "Use map_object.layers instead of map_object.inputs, to pass layers to MapEncoding component."
-        )

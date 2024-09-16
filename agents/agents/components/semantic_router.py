@@ -187,8 +187,3 @@ class SemanticRouter(Component):
         self.publishers_dict = {
             route_topic.name: Publisher(route_topic) for route_topic in route_topics
         }
-
-    def outputs(self, outputs: list[Topic]):
-        raise NotImplementedError(
-            "Use router_obj.routes instead of router_obj.outputs, to pass routes to SemanticRouter component."
-        )
