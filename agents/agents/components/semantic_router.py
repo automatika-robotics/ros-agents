@@ -90,13 +90,6 @@ class SemanticRouter(Component):
         self.allowed_outputs = {"Required": [String]}
         self.db_client = db_client
 
-        self._routes(routes)
-
-        if default_route:
-            if default_route.routes_to.name not in self.routes_dict:
-                raise TypeError("default_route must be one of the specified routes")
-        self.default_route = default_route
-
         super().__init__(
             inputs,
             None,
@@ -106,6 +99,14 @@ class SemanticRouter(Component):
             component_name,
             **kwargs,
         )
+
+        # create routes
+        self._routes(routes)
+
+        if default_route:
+            if default_route.routes_to.name not in self.routes_dict:
+                raise TypeError("default_route must be one of the specified routes")
+        self.default_route = default_route
 
     def activate(self):
         self.get_logger().debug(f"Current Status: {self.health_status.value}")

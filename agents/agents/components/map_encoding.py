@@ -78,7 +78,6 @@ class MapEncoding(Component):
         self.db_client = db_client
         self.position = position
         self.map_meta_data = map_meta_data
-        self._layers(layers)
         super().__init__(
             None,
             None,
@@ -88,6 +87,9 @@ class MapEncoding(Component):
             component_name,
             **kwargs,
         )
+
+        # create layers
+        self._layers(layers)
 
     def activate(self):
         """activate."""
