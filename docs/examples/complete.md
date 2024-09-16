@@ -50,8 +50,6 @@ query_answer = Topic(name="answer", msg_type="String")
 
 t2s_config = TextToSpeechConfig(play_on_device=True)
 
-speecht5 = SpeechT5(name="speecht5")
-roboml_speecht5 = HTTPModelClient(speecht5)
 text_to_speech = TextToSpeech(
     inputs=[query_answer],
     trigger=query_answer,
