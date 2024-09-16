@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from copy import deepcopy
-from typing import Callable, Optional, Sequence, Union
+from typing import Optional, Sequence, Union
 
 from ..ros import (
     BaseComponent,
@@ -9,9 +9,7 @@ from ..ros import (
     SupportedType,
     Topic,
 )
-from ..callbacks import GenericCallback
 from ..config import BaseComponentConfig
-from ..publisher import Publisher
 
 
 class Component(BaseComponent):

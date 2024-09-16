@@ -5,7 +5,6 @@ import numpy as np
 from ..clients.db_base import DBClient
 from ..config import MapConfig
 from ..ros import (
-    FixedInput,
     MapMetaData,
     Odometry,
     String,
@@ -253,7 +252,7 @@ class MapEncoding(Component):
         # if position or map meta data is not received, do nothing
         if position is None or map_meta_data is None:
             self.get_logger().warning(
-                f"Received position: {position}, map_meta_data:{map_meta_data}. Not sending data to map DB."
+                f"Received position: {position}, map_meta_data: {map_meta_data}. Not sending data to map DB."
             )
             return
 
