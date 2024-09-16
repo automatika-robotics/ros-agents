@@ -154,7 +154,7 @@ goto_query = Topic(name="goto_query", msg_type="String")
 goto_answer = Topic(name="goto_answer", msg_type="String")
 goal_point = Topic(name="goal_point", msg_type="PoseStamped")
 
-config = LLMConfig(
+goto_config = LLMConfig(
     enable_rag=True,
     collection_name="map",
     distance_func="l2",
@@ -166,6 +166,7 @@ goto = LLM(
     inputs=[goto_query],
     outputs=[goto_answer, goal_point],
     model_client=llama_client,
+    config=goto_config,
     db_client=chroma_client,
     trigger=goto_query,
     component_name="go_to_x",
