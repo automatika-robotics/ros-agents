@@ -303,9 +303,14 @@ def main():
 
     root_path = Path(__file__)
 
-    # Set options
+    # Set general config options
     config.run.headless = True
     config.project.enable_telemetry = False
     config.root = str(root_path.parent)
+
+    # Set audio config options
+    config.features.audio.sample_rate = 16000  # type: ignore
+    config.features.audio.initial_silence_timeout = 2000  # type: ignore
+    config.features.audio.silence_timeout = 1000  # type: ignore
 
     run_chainlit(str(root_path))
