@@ -14,7 +14,6 @@ from attrs import Attribute
 from jinja2 import Environment, FileSystemLoader, TemplateSyntaxError
 from jinja2.environment import Template
 from PIL import Image
-from pypdf import PdfReader
 from rclpy.logging import get_logger
 from .pluralize import pluralize
 
@@ -214,6 +213,12 @@ class PDFReader:
         :type password: Optional[str]
         :rtype: None
         """
+        try:
+            from pypdf import PdfReader
+        except ModuleNotFoundError as e:
+            raise ModuleNotFoundError(
+                "In order to use the PDFReader, you need pypdf package installed. You can install it with 'pip install pypdf'"
+            ) from e
         if not Path(pdf_file).is_file():
             raise TypeError(f"{pdf_file} is not a valid file")
         try:
