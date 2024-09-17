@@ -26,8 +26,8 @@ class MapEncoding(Component):
     :type layers: list[MapLayer]
     :param position: The topic for the current robot position.
     :type position: Topic
-    :param map_meta_data: The OccupancyGrid topic for storing and retrieving map data.
-    :type map_meta_data: Topic
+    :param map_topic: The OccupancyGrid topic for storing and retrieving map data.
+    :type map_topic: Topic
     :param config: The configuration for the map encoding component.
     :type config: MapConfig
     :param db_client: A database client to store and retrieve map data.
@@ -48,7 +48,7 @@ class MapEncoding(Component):
     map_encoding_component = MapEncoding(
         layers=layers,
         position=position_topic,
-        map_meta_data=map_topic,
+        map_topic=map_topic,
         config=config,
         db_client=db_client,
     )
@@ -61,7 +61,7 @@ class MapEncoding(Component):
         *,
         layers: list[MapLayer],
         position: Topic,
-        map_meta_data: Topic,
+        map_topic: Topic,
         config: MapConfig,
         db_client: DBClient,
         trigger: Union[Topic, list[Topic], float] = 10.0,
@@ -76,7 +76,7 @@ class MapEncoding(Component):
         }
         self.db_client = db_client
         self.position = position
-        self.map_meta_data = map_meta_data
+        self.map_topic = map_topic
         super().__init__(
             None,
             None,
@@ -247,19 +247,17 @@ class MapEncoding(Component):
 
         # process position and meta data inputs
         position = self.callbacks[self.position.name].get_output()
-        map_meta_data = self.callbacks[self.map_meta_data.name].get_output(
-            get_metadata=True
-        )
+        map_data = self.callbacks[self.map_topic.name].get_output(get_metadata=True)
 
         # if position or map meta data is not received, do nothing
-        if position is None or map_meta_data is None:
+        if position is None or map_data is None:
             self.get_logger().warning(
-                f"Received position: {position}, map_meta_data: {map_meta_data}. Not sending data to map DB."
+                f"Received position: {position}, map_meta_data: {map_data}. Not sending data to map DB."
             )
             return
 
         # calculate relative coordinates (using configuration elements of position)
-        map_coordinates = self._get_map_coordinates(position[:3], map_meta_data)
+        map_coordinates = self._get_map_coordinates(position[:3], map_data)
 
         # create input dict
         to_be_added, to_be_checked = self._get_layer_data(time_stamp, map_coordinates)
@@ -299,7 +297,7 @@ class MapEncoding(Component):
         """
         self.layers_dict = {layer.subscribes_to.name: layer for layer in layers}
         layer_topics = [layer.subscribes_to for layer in layers]
-        all_inputs = [*layer_topics, self.position, self.map_meta_data]
+        all_inputs = [*layer_topics, self.position, self.map_topic]
         self.validate_topics(all_inputs, self.allowed_inputs, "Inputs")
         self.callbacks = {
             input.name: input.msg_type.callback(input) for input in all_inputs

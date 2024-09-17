@@ -117,13 +117,13 @@ layer1 = MapLayer(subscribes_to=detections_topic, temporal_change=True)
 layer2 = MapLayer(subscribes_to=introspection_answer, resolution_multiple=3)
 
 position = Topic(name="odom", msg_type="Odometry")
-map_data = Topic(name="map_meta_data", msg_type="OccupancyGrid")
+map_topic = Topic(name="map", msg_type="OccupancyGrid")
 
 map_conf = MapConfig(map_name="map")
 map = MapEncoding(
     layers=[layer1, layer2],
     position=position,
-    map_meta_data=map_data,
+    map_topic=map_topic,
     config=map_conf,
     db_client=chroma_client,
     trigger=15.0,
