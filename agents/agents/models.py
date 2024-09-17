@@ -40,7 +40,7 @@ class Model(BaseAttrs):
 
     name: str
     checkpoint: str
-    init_timeout: int = field(default=600)  # 10 minutes
+    init_timeout: Optional[int] = field(default=None)
 
     def _get_init_params(self) -> dict:
         """Get init params for model initialization."""
@@ -55,7 +55,7 @@ class Encoder(Model):
     :type name: str
     :param checkpoint: The name of the pre-trained model's checkpoint. Default is "BAAI/bge-small-en".
     :type checkpoint: str
-    :param init_timeout: The timeout in seconds for the initialization process. Defaults to 10 minutes (600 seconds).
+    :param init_timeout: The timeout in seconds for the initialization process. Defaults to None.
     :type init_timeout: int, optional
     """
 
@@ -72,7 +72,7 @@ class LLM(Model):
     :type quantization: str or None
     :param history_reset_phrase: A phrase used to reset the conversation history. Defaults to "chat reset".
     :type history_reset_phrase: str
-    :param init_timeout: The timeout in seconds for the initialization process. Defaults to 10 minutes (600 seconds).
+    :param init_timeout: The timeout in seconds for the initialization process. Defaults to None.
     :type init_timeout: int, optional
     """
 
@@ -115,7 +115,7 @@ class OllamaModel(LLM):
     :type system_prompt: str or None
     :param history_reset_phrase: A phrase used to reset the conversation history. Defaults to "chat reset".
     :type history_reset_phrase: str
-    :param init_timeout: The timeout in seconds for the initialization process. Defaults to 10 minutes (600 seconds).
+    :param init_timeout: The timeout in seconds for the initialization process. Defaults to None.
     :type init_timeout: int, optional
 
     Example usage:
@@ -142,7 +142,7 @@ class Llama3_1(LLM):
     :type system_prompt: str or None
     :param history_reset_phrase: A phrase used to reset the conversation history. Defaults to "chat reset".
     :type history_reset_phrase: str
-    :param init_timeout: The timeout in seconds for the initialization process. Defaults to 10 minutes (600 seconds).
+    :param init_timeout: The timeout in seconds for the initialization process. Defaults to None.
     :type init_timeout: int, optional
 
     Example usage:
@@ -170,7 +170,7 @@ class Idefics(LLM):
     :type quantization: str or None
     :param history_reset_phrase: A phrase used to reset the conversation history. Defaults to "chat reset".
     :type history_reset_phrase: str
-    :param init_timeout: The timeout in seconds for the initialization process. Defaults to 10 minutes (600 seconds).
+    :param init_timeout: The timeout in seconds for the initialization process. Defaults to None.
     :type init_timeout: int, optional
 
     Example usage:
@@ -194,7 +194,7 @@ class Idefics2(LLM):
     :type quantization: str or None
     :param history_reset_phrase: A phrase used to reset the conversation history. Defaults to "chat reset".
     :type history_reset_phrase: str
-    :param init_timeout: The timeout in seconds for the initialization process. Defaults to 10 minutes (600 seconds).
+    :param init_timeout: The timeout in seconds for the initialization process. Defaults to None.
     :type init_timeout: int, optional
 
     Example usage:
@@ -218,7 +218,7 @@ class Llava(LLM):
     :type quantization: str or None
     :param history_reset_phrase: A phrase used to reset the conversation history. Defaults to "chat reset".
     :type history_reset_phrase: str
-    :param init_timeout: The timeout in seconds for the initialization process. Defaults to 10 minutes (600 seconds).
+    :param init_timeout: The timeout in seconds for the initialization process. Defaults to None.
     :type init_timeout: int, optional
 
     Example usage:
@@ -242,7 +242,7 @@ class InstructBlip(LLM):
     :type quantization: str or None
     :param history_reset_phrase: A phrase used to reset the conversation history. Defaults to "chat reset".
     :type history_reset_phrase: str
-    :param init_timeout: The timeout in seconds for the initialization process. Defaults to 10 minutes (600 seconds).
+    :param init_timeout: The timeout in seconds for the initialization process. Defaults to None.
     :type init_timeout: int, optional
 
     Example usage:
@@ -264,7 +264,7 @@ class Whisper(Model):
     :type checkpoint: str
     :param quantization: The quantization scheme used by the model. Can be one of "4bit", "8bit" or None (default is "4bit").
     :type quantization: str or None
-    :param init_timeout: The timeout in seconds for the initialization process. Defaults to 10 minutes (600 seconds).
+    :param init_timeout: The timeout in seconds for the initialization process. Defaults to None.
     :type init_timeout: int, optional
 
     Example usage:
@@ -292,7 +292,7 @@ class SpeechT5(Model):
     :param checkpoint: The name of the pre-trained model's checkpoint. Default is "microsoft/speecht5_tts".
     :type checkpoint: str
     :param voice: The voice to use for synthesis. Can be one of "awb", "bdl", "clb", "jmk", "ksp", "rms", or "slt". Default is "clb".
-    :param init_timeout: The timeout in seconds for the initialization process. Defaults to 10 minutes (600 seconds).
+    :param init_timeout: The timeout in seconds for the initialization process. Defaults to None.
     :type init_timeout: int, optional
 
     Example usage:
@@ -330,7 +330,7 @@ class Bark(Model):
     :type checkpoint: str
     :param attn_implementation: The attention implementation to use for the model. Default is "flash_attention_2".
     :param voice: The voice to use for synthesis. More choices are available [here](https://suno-ai.notion.site/8b8e8749ed514b0cbf3f699013548683?v=bc67cff786b04b50b3ceb756fd05f68c). Default is "v2/en_speaker_6".
-    :param init_timeout: The timeout in seconds for the initialization process. Defaults to 10 minutes (600 seconds).
+    :param init_timeout: The timeout in seconds for the initialization process. Defaults to None.
     :type init_timeout: int, optional
 
     Example usage:
@@ -372,7 +372,7 @@ class VisionModel(Model):
     :type tracking_distance_threshold: int
     :param _num_trackers: The number of trackers to use. This number depends on the number of inputs image streams being given to the component. It is set automatically if **setup_trackers** is True.
     :type _num_trackers: int
-    :param init_timeout: The timeout in seconds for the initialization process. Defaults to 10 minutes (600 seconds).
+    :param init_timeout: The timeout in seconds for the initialization process. Defaults to None.
     :type init_timeout: int, optional
 
     Example usage:
