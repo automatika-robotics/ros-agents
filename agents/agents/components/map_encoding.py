@@ -5,7 +5,7 @@ import numpy as np
 from ..clients.db_base import DBClient
 from ..config import MapConfig
 from ..ros import (
-    MapMetaData,
+    OccupancyGrid,
     Odometry,
     String,
     Topic,
@@ -19,14 +19,14 @@ from .component_base import Component, ComponentRunType
 
 class MapEncoding(Component):
     """Map encoding component that encodes text information as a semantic map based on the robots localization.
-    It takes in map layers, position topic, map meta data topic, and a vector database client.
+    It takes in map layers, position topic, map occupancy grid topic, and a vector database client.
     Map layers can be arbitrary text based outputs from other components such as MLLMs or Vision.
 
     :param layers: A list of map layer objects to be encoded.
     :type layers: list[MapLayer]
     :param position: The topic for the current robot position.
     :type position: Topic
-    :param map_meta_data: The topic for storing and retrieving map metadata.
+    :param map_meta_data: The OccupancyGrid topic for storing and retrieving map data.
     :type map_meta_data: Topic
     :param config: The configuration for the map encoding component.
     :type config: MapConfig
@@ -40,7 +40,7 @@ class MapEncoding(Component):
     Example usage:
     ```python
     position_topic = Topic(name="position", msg_type="Odometry")
-    map_meta_data_topic = Topic(name="map_meta_data", msg_type="MapMetaData")
+    map_topic = Topic(name="map", msg_type="OccupancyGrid")
     config = MapConfig(map_name="map")
     db_client = DBClient(db=ChromaDB("database_name"))
     layers = [MapLayer(subscribes_to=text1, resolution_multiple=3),
@@ -48,7 +48,7 @@ class MapEncoding(Component):
     map_encoding_component = MapEncoding(
         layers=layers,
         position=position_topic,
-        map_meta_data=map_meta_data_topic,
+        map_meta_data=map_topic,
         config=config,
         db_client=db_client,
     )
@@ -71,7 +71,7 @@ class MapEncoding(Component):
     ):
         self.config: MapConfig = config
         self.allowed_inputs = {
-            "Required": [String, Odometry, MapMetaData],
+            "Required": [String, Odometry, OccupancyGrid],
             "Optional": [Detections],
         }
         self.db_client = db_client
@@ -247,7 +247,9 @@ class MapEncoding(Component):
 
         # process position and meta data inputs
         position = self.callbacks[self.position.name].get_output()
-        map_meta_data = self.callbacks[self.map_meta_data.name].get_output()
+        map_meta_data = self.callbacks[self.map_meta_data.name].get_output(
+            get_metadata=True
+        )
 
         # if position or map meta data is not received, do nothing
         if position is None or map_meta_data is None:

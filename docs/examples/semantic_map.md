@@ -114,12 +114,12 @@ layer2 = MapLayer(subscribes_to=introspection_answer, resolution_multiple=3)
 
 _temporal_change_ parameter specifies that for the same spatial position the output coming in from the component needs to be stored along with timestamps, as the output can change over time. By default this option is set to **False**. _resolution_multiple_ specifies that we can coarse grain spatial coordinates by combining map grid cells.
 
-Next we need to provide our component with localization information via an odometry topic and a map meta data topic. The latter is necessary to know the actual resolution of the robots map.
+Next we need to provide our component with localization information via an odometry topic and a map data topic (of type OccupancyGrid). The latter is necessary to know the actual resolution of the robots map.
 
 ```python
 # Initialize mandatory topics defining the robots localization in space
 position = Topic(name="odom", msg_type="Odometry")
-map_meta_data = Topic(name="map_meta_data", msg_type="MapMetaData")
+map_data = Topic(name="map_meta_data", msg_type="OccupancyGrid")
 ```
 
 ```{caution}
@@ -146,7 +146,7 @@ map_conf = MapConfig(map_name="map")  # We give our map a name
 map = MapEncoding(
     layers=[layer1, layer2],
     position=position,
-    map_meta_data=map_meta_data,
+    map_meta_data=map_data,
     config=map_conf,
     db_client=chroma_client,
     trigger=15.0,  # map layer data is stored every 15 seconds
