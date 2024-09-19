@@ -168,7 +168,7 @@ class LLM(ModelComponent):
                 "\n".join(
                     f"{str(meta)}, {doc}"
                     for meta, doc in zip(
-                        result["output"]["metadata"], result["output"]["documents"]
+                        result["output"]["metadatas"], result["output"]["documents"]
                     )
                 )
                 if self.config.add_metadata
