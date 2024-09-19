@@ -20,7 +20,8 @@ class LLMConfig(BaseComponentConfig):
     :param distance_func: The distance metric used for nearest neighbor search for RAG.
         Supported values are "l2", "ip", and "cosine".
     :type distance_func: str
-    :param n_results: The maximum number of results to return for RAG.
+    :param n_results: The maximum number of results to return for RAG. Defaults to 1.
+        For numbers greater than 1, results will be concatenated together in a single string.
     :type n_results: int
     :param chat_history: Whether to include chat history in the LLM's prompt.
     :type chat_history: bool
