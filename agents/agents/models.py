@@ -68,18 +68,18 @@ class LLM(Model):
 
     :param name: An arbitrary name given to the model.
     :type name: str
+    :param system_prompt: The system prompt used to initialize the model. If not provided, defaults to None.
+    :type system_prompt: str or None
     :param quantization: The quantization scheme used by the model. Can be one of "4bit", "8bit" or None (default is "4bit").
     :type quantization: str or None
-    :param history_reset_phrase: A phrase used to reset the conversation history. Defaults to "chat reset".
-    :type history_reset_phrase: str
     :param init_timeout: The timeout in seconds for the initialization process. Defaults to None.
     :type init_timeout: int, optional
     """
 
+    system_prompt: Optional[str] = field(default=None)
     quantization: Optional[str] = field(
         default="4bit", validator=base_validators.in_(["4bit", "8bit", None])
     )
-    history_reset_phrase: str = field(default="chat reset")
 
     def _set_ollama_checkpoint(self):
         """Get ollama compatible checkpoint name."""
@@ -97,7 +97,7 @@ class LLM(Model):
         return {
             "checkpoint": self.checkpoint,
             "quantization": self.quantization,
-            "history_reset_phrase": self.history_reset_phrase,
+            "system_prompt": self.system_prompt,
         }
 
 
@@ -113,8 +113,6 @@ class OllamaModel(LLM):
     :type quantization: str or None
     :param system_prompt: The system prompt used to initialize the model. If not provided, defaults to None.
     :type system_prompt: str or None
-    :param history_reset_phrase: A phrase used to reset the conversation history. Defaults to "chat reset".
-    :type history_reset_phrase: str
     :param init_timeout: The timeout in seconds for the initialization process. Defaults to None.
     :type init_timeout: int, optional
 
@@ -124,7 +122,6 @@ class OllamaModel(LLM):
     ```
     """
 
-    system_prompt: Optional[str] = field(default=None)
     port: Optional[int] = field(default=11434)
 
 
@@ -140,8 +137,6 @@ class Llama3_1(LLM):
     :type quantization: str or None
     :param system_prompt: The system prompt used to initialize the model. If not provided, defaults to None.
     :type system_prompt: str or None
-    :param history_reset_phrase: A phrase used to reset the conversation history. Defaults to "chat reset".
-    :type history_reset_phrase: str
     :param init_timeout: The timeout in seconds for the initialization process. Defaults to None.
     :type init_timeout: int, optional
 
@@ -151,7 +146,6 @@ class Llama3_1(LLM):
     ```
     """
 
-    system_prompt: Optional[str] = field(default=None)
     checkpoint: str = field(default="meta-llama/Meta-Llama-3.1-8B-Instruct")
 
 
@@ -168,8 +162,6 @@ class Idefics(LLM):
     :type checkpoint: str
     :param quantization: The quantization scheme used by the model. Can be one of "4bit", "8bit" or None (default is "4bit").
     :type quantization: str or None
-    :param history_reset_phrase: A phrase used to reset the conversation history. Defaults to "chat reset".
-    :type history_reset_phrase: str
     :param init_timeout: The timeout in seconds for the initialization process. Defaults to None.
     :type init_timeout: int, optional
 
@@ -190,10 +182,10 @@ class Idefics2(LLM):
     :type name: str
     :param checkpoint: The name of the pre-trained model's checkpoint. Default is "HuggingFaceM4/idefics2-8b". For available checkpoints, consult [Idefics2 checkpoints on HuggingFace](https://huggingface.co/HuggingFaceM4/idefics2-8b).
     :type checkpoint: str
+    :param system_prompt: The system prompt used to initialize the model. If not provided, defaults to None.
+    :type system_prompt: str or None
     :param quantization: The quantization scheme used by the model. Can be one of "4bit", "8bit" or None (default is "4bit").
     :type quantization: str or None
-    :param history_reset_phrase: A phrase used to reset the conversation history. Defaults to "chat reset".
-    :type history_reset_phrase: str
     :param init_timeout: The timeout in seconds for the initialization process. Defaults to None.
     :type init_timeout: int, optional
 
@@ -214,10 +206,10 @@ class Llava(LLM):
     :type name: str
     :param checkpoint: The name of the pre-trained model's checkpoint. Default is "liuhaotian/llava-v1.6-mistral-7b". For available checkpoints, consult [Llava checkpoints on HuggingFace](https://huggingface.co/liuhaotian).
     :type checkpoint: str
+    :param system_prompt: The system prompt used to initialize the model. If not provided, defaults to None.
+    :type system_prompt: str or None
     :param quantization: The quantization scheme used by the model. Can be one of "4bit", "8bit" or None (default is "4bit").
     :type quantization: str or None
-    :param history_reset_phrase: A phrase used to reset the conversation history. Defaults to "chat reset".
-    :type history_reset_phrase: str
     :param init_timeout: The timeout in seconds for the initialization process. Defaults to None.
     :type init_timeout: int, optional
 
@@ -238,10 +230,10 @@ class InstructBlip(LLM):
     :type name: str
     :param checkpoint: The name of the pre-trained model's checkpoint. Default is "Salesforce/instructblip-vicuna-7b". For available checkpoints, consult [InstructBlip checkpoints on HuggingFace](https://huggingface.co/models?search=instructblip).
     :type checkpoint: str
-    :param quantization: The quantization scheme used by the model. Can be one of "4bit", "8bit" or None (default is "4bit").
-    :type quantization: str or None
     :param history_reset_phrase: A phrase used to reset the conversation history. Defaults to "chat reset".
     :type history_reset_phrase: str
+    :param quantization: The quantization scheme used by the model. Can be one of "4bit", "8bit" or None (default is "4bit").
+    :type quantization: str or None
     :param init_timeout: The timeout in seconds for the initialization process. Defaults to None.
     :type init_timeout: int, optional
 

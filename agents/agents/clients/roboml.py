@@ -404,10 +404,6 @@ class RESPModelClient(ModelClient):
             self.logger.info(f"Initializing {self.model.name} on RoboML remote")
             # make initialization params
             model_dict = self.model._get_init_params()
-            if hasattr(self.model, "system_prompt") and (
-                sys_prompt := self.model.system_prompt  # type: ignore
-            ):
-                model_dict["system_prompt"] = sys_prompt
 
             # initialize model
             init_b = self.packer(model_dict)
