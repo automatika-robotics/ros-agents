@@ -91,6 +91,12 @@ class MLLM(LLM):
         if trigger := kwargs.get("topic"):
             query = self.trig_callbacks[trigger.name].get_output()
             context[trigger.name] = query
+
+            # handle chat reset
+            if query.lower() == self.config.history_reset_phrase:
+                self.chat_history = []
+                return None
+
         else:
             query = None
 
@@ -120,10 +126,14 @@ class MLLM(LLM):
         # add rag docs to query if enabled in config and if docs retreived
         query = self._make_rag_query(query) if self.config.enable_rag else query
 
+        message = {"role": "user", "content": query}
+
+        messages = self._handle_chat_history(message)
+
         self.get_logger().debug(query)
 
         return {
-            "query": query,
+            "query": messages,
             "images": images,
             **self.config._get_inference_params(),
         }

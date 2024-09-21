@@ -10,6 +10,7 @@ from ..config import LLMConfig
 from ..ros import FixedInput, String, Topic, Detections
 from ..utils import get_prompt_template, validate_func_args
 from .model_component import ModelComponent
+from .component_base import ComponentRunType
 
 
 class LLM(ModelComponent):
@@ -82,6 +83,7 @@ class LLM(ModelComponent):
         self._component_template: Optional[Template] = None
 
         self.db_client = db_client if db_client else None
+        self.chat_history = []
 
         super().__init__(
             inputs,
@@ -177,6 +179,19 @@ class LLM(ModelComponent):
             return f"{rag_docs}{query}"
         return query
 
+    def _handle_chat_history(self, message: dict):
+        if self.config.chat_history:
+            self.chat_history.append(message)
+
+            # if the size of history exceeds specified size than take out first
+            # two messages
+            if len(self.chat_history) / 2 > self.config.history_size:
+                self.chat_history = self.chat_history[2:]
+
+            return self.chat_history
+        else:
+            return [message]
+
     def _create_input(self, *_, **kwargs) -> Optional[dict[str, Any]]:
         """Create inference input for LLM models
         :param args:
@@ -189,6 +204,12 @@ class LLM(ModelComponent):
         if trigger := kwargs.get("topic"):
             query = self.trig_callbacks[trigger.name].get_output()
             context[trigger.name] = query
+
+            # handle chat reset
+            if query.lower() == self.config.history_reset_phrase:
+                self.chat_history = []
+                return None
+
         else:
             query = None
 
@@ -215,12 +236,57 @@ class LLM(ModelComponent):
         # add rag docs to query if enabled in config and if docs retreived
         query = self._make_rag_query(query) if self.config.enable_rag else query
 
+        message = {"role": "user", "content": query}
+
+        messages = self._handle_chat_history(message)
+
         self.get_logger().debug(query)
 
         return {
-            "query": query,
+            "query": messages,
             **self.config._get_inference_params(),
         }
+
+    def _execution_step(self, *args, **kwargs):
+        """_execution_step.
+
+        :param args:
+        :param kwargs:
+        """
+
+        if self.run_type is ComponentRunType.EVENT:
+            trigger = kwargs.get("topic")
+            if not trigger:
+                return
+            self.get_logger().info(f"Received trigger on topic {trigger.name}")
+        else:
+            time_stamp = self.get_ros_time().sec
+            self.get_logger().info(f"Sending at {time_stamp}")
+
+        # create inference input
+        inference_input = self._create_input(*args, **kwargs)
+        # call model inference
+        if not inference_input:
+            self.get_logger().warning("Input not received, not calling model inference")
+            return
+
+        # conduct inference
+        if self.model_client:
+            result = self.model_client.inference(inference_input)
+            # raise a fallback trigger via health status
+            if not result:
+                self.health_status.set_failure()
+            else:
+                # store history
+                if self.config.chat_history:
+                    self.chat_history.append({
+                        "role": "assistant",
+                        "content": result["output"],
+                    })
+                # publish inference result
+                if result["output"] and hasattr(self, "publishers_dict"):
+                    for publisher in self.publishers_dict.values():
+                        publisher.publish(**result)
 
     def set_topic_prompt(self, input_topic: Topic, template: Union[str, Path]) -> None:
         """Set prompt template on any input topic of type string.

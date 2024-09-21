@@ -25,6 +25,10 @@ class LLMConfig(BaseComponentConfig):
     :type n_results: int
     :param chat_history: Whether to include chat history in the LLM's prompt.
     :type chat_history: bool
+    :param history_reset_phrase: Phrase to reset chat history. Defaults to 'chat reset'
+    :type history_reset_phrase: str
+    :param history_size: Number of user messages to keep in chat history. Defaults to 10
+    :type history_size: int
     :param temperature: Temperature used for sampling tokens during generation.
         Default is 0.7 and must be greater than 0.0.
     :type temperature: float
@@ -45,6 +49,8 @@ class LLMConfig(BaseComponentConfig):
     n_results: int = field(default=1)
     add_metadata: bool = field(default=False)
     chat_history: bool = field(default=False)
+    history_reset_phrase: str = "chat reset"
+    history_size: int = 10  # number of user messages
     temperature: float = field(default=0.7, validator=base_validators.gt(0.0))
     max_new_tokens: int = field(default=100, validator=base_validators.gt(0))
 
