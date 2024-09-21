@@ -118,7 +118,7 @@ class OllamaClient(ModelClient):
             input["images"] = images
 
         # make result part of the input
-        input["output"] = ollama_result["response"]  # type: ignore
+        input["output"] = ollama_result["message"]["content"]  # type: ignore
         return input
 
     def _deinitialize(self):
