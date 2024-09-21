@@ -2,7 +2,7 @@
 The following model specification classes are meant to define a comman interface for initialization parameters for ML models across supported model serving platforms.
 """
 
-from typing import Optional, Annotated
+from typing import Optional
 
 from attrs import define, field
 from .ros import BaseAttrs, base_validators
@@ -11,7 +11,6 @@ __all__ = [
     "Encoder",
     "Llama3_1",
     "OllamaModel",
-    "Idefics",
     "Idefics2",
     "Llava",
     "Whisper",
@@ -23,7 +22,6 @@ __all__ = [
 
 _ollama_mapping = [
     "llava",
-    "llama3",
     "llama3_1",
     "phi3",
     "qwen2",
@@ -126,6 +124,54 @@ class OllamaModel(LLM):
 
 
 @define(kw_only=True)
+class TransformersLLM(LLM):
+    """An LLM model that needs to be initialized with any LLM checkpoint available on HuggingFace transformers. This model can be used with a roboml client.
+
+    :param name: An arbitrary name given to the model.
+    :type name: str
+    :param checkpoint: The name of the pre-trained model's checkpoint. Default is "microsoft/Phi-3-mini-4k-instruct". For available checkpoints consult [HuggingFace LLM Models](https://huggingface.co/models?other=LLM)
+    :type checkpoint: str
+    :param quantization: The quantization scheme used by the model. Can be one of "4bit", "8bit" or None (default is "4bit").
+    :type quantization: str or None
+    :param system_prompt: The system prompt used to initialize the model. If not provided, defaults to None.
+    :type system_prompt: str or None
+    :param init_timeout: The timeout in seconds for the initialization process. Defaults to None.
+    :type init_timeout: int, optional
+
+    Example usage:
+    ```python
+    llm = TransformersLLM(name='llm', checkpoint="meta-llama/Meta-Llama-3.1-8B-Instruct")
+    ```
+    """
+
+    checkpoint: str = field(default="microsoft/Phi-3-mini-4k-instruct")
+
+
+@define(kw_only=True)
+class TransformersMLLM(LLM):
+    """An MLLM model that needs to be initialized with any MLLM checkpoint available on HuggingFace transformers. This model can be used with a roboml client.
+
+    :param name: An arbitrary name given to the model.
+    :type name: str
+    :param checkpoint: The name of the pre-trained model's checkpoint. Default is "HuggingFaceM4/idefics2-8b". For available checkpoints consult [HuggingFace Image-Text to Text Models](https://huggingface.co/models?pipeline_tag=image-text-to-text)
+    :type checkpoint: str
+    :param quantization: The quantization scheme used by the model. Can be one of "4bit", "8bit" or None (default is "4bit").
+    :type quantization: str or None
+    :param system_prompt: The system prompt used to initialize the model. If not provided, defaults to None.
+    :type system_prompt: str or None
+    :param init_timeout: The timeout in seconds for the initialization process. Defaults to None.
+    :type init_timeout: int, optional
+
+    Example usage:
+    ```python
+    mllm = TransformersMLLM(name='mllm', checkpoint="gemma2:latest")
+    ```
+    """
+
+    checkpoint: str = field(default="HuggingFaceM4/idefics2-8b")
+
+
+@define(kw_only=True)
 class Llama3_1(LLM):
     """A pre-trained language model from MetaAI for tasks such as text generation, question answering, and more. [Details](https://llama.meta.com)
 
@@ -147,31 +193,6 @@ class Llama3_1(LLM):
     """
 
     checkpoint: str = field(default="meta-llama/Meta-Llama-3.1-8B-Instruct")
-
-
-Llama3: Annotated[type[Llama3_1], "Alias for Llama3_1"] = Llama3_1
-
-
-@define(kw_only=True)
-class Idefics(LLM):
-    """A pre-trained visual language model from HuggingFace for tasks such as visual question answering. [Details](https://huggingface.co/blog/idefics)
-
-    :param name: An arbitrary name given to the model.
-    :type name: str
-    :param checkpoint: The name of the pre-trained model's checkpoint. Default is "HuggingFaceM4/idefics-9b-instruct".
-    :type checkpoint: str
-    :param quantization: The quantization scheme used by the model. Can be one of "4bit", "8bit" or None (default is "4bit").
-    :type quantization: str or None
-    :param init_timeout: The timeout in seconds for the initialization process. Defaults to None.
-    :type init_timeout: int, optional
-
-    Example usage:
-    ```python
-    idefics = Idefics2(name='mllm1', quantization="8bit")  # Initialize with a custom checkpoint
-    ```
-    """
-
-    checkpoint: str = field(default="HuggingFaceM4/idefics-9b-instruct")
 
 
 @define(kw_only=True)
