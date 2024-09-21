@@ -93,7 +93,7 @@ class MLLM(LLM):
             context[trigger.name] = query
 
             # handle chat reset
-            if query.lower() == self.config.history_reset_phrase:
+            if self.chat_history and query.lower() == self.config.history_reset_phrase:
                 self.chat_history = []
                 return None
 
@@ -130,7 +130,7 @@ class MLLM(LLM):
 
         messages = self._handle_chat_history(message)
 
-        self.get_logger().debug(query)
+        self.get_logger().debug(f"Input from component: {messages}")
 
         return {
             "query": messages,
