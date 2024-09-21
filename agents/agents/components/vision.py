@@ -7,6 +7,7 @@ from ..config import VisionConfig
 from ..ros import Detections, FixedInput, Image, Topic, Trackings
 from ..utils import validate_func_args
 from .model_component import ModelComponent
+from .component_base import ComponentRunType
 
 
 class Vision(ModelComponent):
@@ -105,3 +106,38 @@ class Vision(ModelComponent):
             return None
 
         return {"images": images, **self.config._get_inference_params()}
+
+    def _execution_step(self, *args, **kwargs):
+        """_execution_step.
+
+        :param args:
+        :param kwargs:
+        """
+
+        if self.run_type is ComponentRunType.EVENT:
+            trigger = kwargs.get("topic")
+            if not trigger:
+                return
+            self.get_logger().info(f"Received trigger on topic {trigger.name}")
+        else:
+            time_stamp = self.get_ros_time().sec
+            self.get_logger().info(f"Sending at {time_stamp}")
+
+        # create inference input
+        inference_input = self._create_input(*args, **kwargs)
+        # call model inference
+        if not inference_input:
+            self.get_logger().warning("Input not received, not calling model inference")
+            return
+
+        # conduct inference
+        if self.model_client:
+            result = self.model_client.inference(inference_input)
+            # raise a fallback trigger via health status
+            if not result:
+                self.health_status.set_failure()
+            else:
+                # publish inference result
+                if result["output"] and hasattr(self, "publishers_dict"):
+                    for publisher in self.publishers_dict.values():
+                        publisher.publish(**result)
