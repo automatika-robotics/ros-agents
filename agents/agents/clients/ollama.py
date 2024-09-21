@@ -89,11 +89,12 @@ class OllamaClient(ModelClient):
         # create input
         input = {
             "model": self.model.checkpoint,
-            "prompt": query,
+            "messages": query,
         }
         inference_input.pop("query")
         if images := inference_input.get("images"):
-            input["images"] = [encode_arr_base64(img) for img in images]
+            # make images parth of the latest message in message list
+            input["messages"][-1]["images"] = [encode_arr_base64(img) for img in images]
             inference_input.pop("images")
         # ollama uses num_predict for max_new_tokens
         if inference_input.get("max_new_tokens"):
@@ -105,14 +106,14 @@ class OllamaClient(ModelClient):
         try:
             # set timeout on underlying httpx client
             self.client._client.timeout = self.inference_timeout
-            ollama_result = self.client.generate(**input)
+            ollama_result = self.client.chat(**input)
         except Exception as e:
             self.logger.error(str(e))
             return None
 
         self.logger.debug(str(ollama_result))
 
-        # replace np images back in inference input
+        # Add np images back in inference input
         if images:
             input["images"] = images
 
