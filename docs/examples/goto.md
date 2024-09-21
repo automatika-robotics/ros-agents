@@ -81,13 +81,16 @@ import numpy as np
 def llm_answer_to_goal_point(output: str) -> Optional[np.ndarray]:
     # extract the json part of the output string (including brackets)
     # one can use sophisticated regex parsing here but we'll keep it simple
-    json_string = output[output.find("{"):output.find("}") + 1]
-
+    json_string = output[output.find("{") : output.rfind("}") + 1]
     # load the string as a json and extract position coordinates
     # if there is an error, return None, i.e. no output would be published to goal_point
     try:
         json_dict = json.loads(json_string)
-        return np.array(json_dict['position'])
+        coordinates = np.fromstring(json_dict["position"], sep=',', dtype=np.float64)
+        print('Coordinates Extracted:', coordinates)
+        if coordinates.shape[0] < 3:
+            coordinates = np.append(coordinates, 0)
+        return coordinates
     except Exception:
         return
 
@@ -103,8 +106,10 @@ And we will launch our Go-to-X component.
 from agents.ros import Launcher
 
 # Launch the component
-launcher = Launcher(components=[goto],
-                    activate_all_components_on_start=True)
+launcher = Launcher()
+launcher.add_pkg(
+    components=[goto],
+    activate_all_components_on_start=True)
 launcher.bringup()
 ```
 
@@ -163,13 +168,16 @@ goto.set_component_prompt(
 def llm_answer_to_goal_point(output: str) -> Optional[np.ndarray]:
     # extract the json part of the output string (including brackets)
     # one can use sophisticated regex parsing here but we'll keep it simple
-    json_string = output[output.find("{"):output.find("}") + 1]
-
+    json_string = output[output.find("{") : output.rfind("}") + 1]
     # load the string as a json and extract position coordinates
     # if there is an error, return None, i.e. no output would be published to goal_point
     try:
         json_dict = json.loads(json_string)
-        return np.array(json_dict['position'])
+        coordinates = np.fromstring(json_dict["position"], sep=',', dtype=np.float64)
+        print('Coordinates Extracted:', coordinates)
+        if coordinates.shape[0] < 3:
+            coordinates = np.append(coordinates, 0)
+        return coordinates
     except Exception:
         return
 
@@ -178,7 +186,9 @@ def llm_answer_to_goal_point(output: str) -> Optional[np.ndarray]:
 goto.add_publisher_preprocessor(goal_point, llm_answer_to_goal_point)
 
 # Launch the component
-launcher = Launcher(components=[goto],
-                    activate_all_components_on_start=True)
+launcher = Launcher()
+launcher.add_pkg(
+    components=[goto],
+    activate_all_components_on_start=True)
 launcher.bringup()
 ```

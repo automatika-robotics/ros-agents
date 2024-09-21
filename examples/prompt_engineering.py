@@ -40,5 +40,6 @@ mllm.set_component_prompt(
     This image has following items: {{ detections }}.
     Answer the following about this image: {{ text0 }}"""
 )
-launcher = Launcher(components=[vision, mllm], activate_all_components_on_start=True)
+launcher = Launcher()
+launcher.add_pkg(components=[vision, mllm], activate_all_components_on_start=True)
 launcher.bringup()

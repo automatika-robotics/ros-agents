@@ -96,8 +96,10 @@ Finally we will launch our components as we did in the previous example.
 from agents.ros import Launcher
 
 # Launch the components
-launcher = Launcher(components=[vision, mllm],
-                    activate_all_components_on_start=True)
+launcher = Launcher()
+launcher.add_pkg(
+    components=[vision, mllm],
+    activate_all_components_on_start=True)
 launcher.bringup()
 ```
 
@@ -147,7 +149,9 @@ mllm.set_component_prompt(
     This image has following items: {{ detections }}.
     Answer the following about this image: {{ text0 }}"""
 )
-launcher = Launcher(components=[vision, mllm],
-                    activate_all_components_on_start=True)
+launcher = Launcher()
+launcher.add_pkg(
+    components=[vision, mllm],
+    activate_all_components_on_start=True)
 launcher.bringup()
 ```

@@ -161,8 +161,10 @@ And as always we will launch our components as we did in the previous examples.
 from agents.ros import Launcher
 
 # Launch the components
-launcher = Launcher(components=[vision, introspector, map],
-                    activate_all_components_on_start=True)
+launcher = Launcher()
+launcher.add_pkg(
+    components=[vision, introspector, map],
+    activate_all_components_on_start=True)
 launcher.bringup()
 ```
 
@@ -259,7 +261,9 @@ map = MapEncoding(
 )
 
 # Launch the components
-launcher = Launcher(components=[vision, introspector, map],
-                    activate_all_components_on_start=True)
+launcher = Launcher()
+launcher.add_pkg(
+    components=[vision, introspector, map],
+    activate_all_components_on_start=True)
 launcher.bringup()
 ```
