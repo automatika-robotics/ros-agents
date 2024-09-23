@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any, Optional, Union, List
 
 from jinja2.environment import Template
 
@@ -179,7 +179,7 @@ class LLM(ModelComponent):
             return f"{rag_docs}{query}"
         return query
 
-    def _handle_chat_history(self, message: dict):
+    def _handle_chat_history(self, message: dict) -> List:
         if self.config.chat_history:
             self.chat_history.append(message)
 

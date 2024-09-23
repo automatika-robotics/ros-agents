@@ -32,7 +32,6 @@ class DBClient(ABC):
         :type logging_level: str
         """
         self.db = db
-        self.db_type = db.__class__.__name__
         self.host = host
         self.port = port
         self.init_on_activation = init_on_activation

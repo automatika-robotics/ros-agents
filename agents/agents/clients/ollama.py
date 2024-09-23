@@ -2,7 +2,7 @@ from typing import Any, Optional
 
 import httpx
 
-from ..models import LLM
+from ..models import LLM, TransformersLLM, TransformersMLLM
 from ..utils import encode_arr_base64
 from .model_base import ModelClient
 

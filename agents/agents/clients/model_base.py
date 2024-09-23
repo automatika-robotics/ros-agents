@@ -33,7 +33,6 @@ class ModelClient(ABC):
         :type logging_level: str
         """
         self.model = model
-        self.model_type = model.__class__.__name__
         self.host = host
         self.port = port
         self.init_on_activation = init_on_activation

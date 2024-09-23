@@ -39,7 +39,7 @@ class MLLM(LLM):
     image0 = Topic(name="image0", msg_type="Image")
     text0 = Topic(name="text1", msg_type="String")
     config = MLLMConfig()
-    model = Idefics(name='idefics')
+    model = TransformersMLLM(name='idefics')
     model_client = ModelClient(model=model)
     mllm_component = MLLM(inputs=[text0, image0],
                           outputs=[text1],

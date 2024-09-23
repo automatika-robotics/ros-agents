@@ -5,7 +5,7 @@ from typing import Any, Optional
 
 import httpx
 
-from ..models import Model, OllamaModel
+from ..models import Model, OllamaModel, TransformersLLM, TransformersMLLM
 from ..utils import encode_arr_base64
 from ..vectordbs import DB
 from .db_base import DBClient
@@ -53,6 +53,7 @@ class HTTPModelClient(ModelClient):
             init_on_activation=init_on_activation,
             logging_level=logging_level,
         )
+        self.model_type = self.model.__class__
         self.url = f"http://{self.host}:{self.port}"
         self._check_connection()
 
@@ -73,7 +74,13 @@ class HTTPModelClient(ModelClient):
         """
         # Create a model node on RoboML
         self.logger.info("Creating model node on remote")
-        start_params = {"node_name": self.model.name, "node_type": self.model_type}
+        if issubclass(self.model_type, TransformersLLM):
+            model_type = TransformersLLM.__name__
+        elif issubclass(self.model_type, TransformersMLLM):
+            model_type = TransformersMLLM.__name__
+        else:
+            model_type = self.model_type.__name__
+        start_params = {"node_name": self.model.name, "node_type": model_type}
         try:
             httpx.post(
                 f"{self.url}/add_node", params=start_params, timeout=self.init_timeout
@@ -180,6 +187,7 @@ class HTTPDBClient(DBClient):
             init_on_activation=init_on_activation,
             logging_level=logging_level,
         )
+        self.db_type = self.db.__class__
         self.url = f"http://{self.host}:{self.port}"
         self.response_timeout = response_timeout
         self._check_connection()
@@ -201,7 +209,7 @@ class HTTPDBClient(DBClient):
         """
         # Create a DB node on RoboML
         self.logger.info("Creating db node on remote")
-        start_params = {"node_name": self.db.name, "node_type": self.db_type}
+        start_params = {"node_name": self.db.name, "node_type": self.db_type.__name__}
         try:
             httpx.post(
                 f"{self.url}/add_node", params=start_params, timeout=self.init_timeout
@@ -361,6 +369,7 @@ class RESPModelClient(ModelClient):
             init_on_activation=init_on_activation,
             logging_level=logging_level,
         )
+        self.model_type = self.model.__class__
         try:
             import msgpack
             import msgpack_numpy as m_pack
@@ -396,7 +405,13 @@ class RESPModelClient(ModelClient):
         """
         # Create a model node on RoboML
         self.logger.info("Creating model node on remote")
-        start_params = {"node_name": self.model.name, "node_type": self.model_type}
+        if issubclass(self.model_type, TransformersLLM):
+            model_type = TransformersLLM.__name__
+        elif issubclass(self.model_type, TransformersMLLM):
+            model_type = TransformersMLLM.__name__
+        else:
+            model_type = self.model_type.__name__
+        start_params = {"node_name": self.model.name, "node_type": model_type}
         try:
             start_params_b = self.packer(start_params)
             self.redis.execute_command("add_node", start_params_b)
@@ -515,6 +530,7 @@ class RESPDBClient(DBClient):
             init_on_activation=init_on_activation,
             logging_level=logging_level,
         )
+        self.db_type = self.db.__class__
         try:
             import msgpack
             import msgpack_numpy as m_pack
@@ -550,7 +566,7 @@ class RESPDBClient(DBClient):
         """
         # Creating DB node on remote
         self.logger.info("Creating db node on remote")
-        start_params = {"node_name": self.db.name, "node_type": self.db_type}
+        start_params = {"node_name": self.db.name, "node_type": self.db_type.__name__}
 
         try:
             start_params_b = self.packer(start_params)

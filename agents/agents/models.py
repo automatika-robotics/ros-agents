@@ -9,6 +9,7 @@ from .ros import BaseAttrs, base_validators
 
 __all__ = [
     "Encoder",
+    "Llama3",
     "Llama3_1",
     "OllamaModel",
     "Idefics2",
@@ -20,9 +21,10 @@ __all__ = [
     "VisionModel",
 ]
 
+# ollama models map to model:latest tag
 _ollama_mapping = [
     "llava",
-    "llama3_1",
+    "llama3" "llama3_1",
     "phi3",
     "qwen2",
     "aya",
@@ -172,7 +174,31 @@ class TransformersMLLM(LLM):
 
 
 @define(kw_only=True)
-class Llama3_1(LLM):
+class Llama3(TransformersLLM):
+    """A pre-trained language model from MetaAI for tasks such as text generation, question answering, and more. [Details](https://llama.meta.com)
+
+    :param name: An arbitrary name given to the model.
+    :type name: str
+    :param checkpoint: The name of the pre-trained model's checkpoint. Default is "meta-llama/Meta-Llama-3-8B-Instruct". For available checkpoints, consult [LLama3 checkpoints on HuggingFace](https://huggingface.co/models?search="llama3").
+    :type checkpoint: str
+    :param quantization: The quantization scheme used by the model. Can be one of "4bit", "8bit" or None (default is "4bit").
+    :type quantization: str or None
+    :param system_prompt: The system prompt used to initialize the model. If not provided, defaults to None.
+    :type system_prompt: str or None
+    :param init_timeout: The timeout in seconds for the initialization process. Defaults to None.
+    :type init_timeout: int, optional
+
+    Example usage:
+    ```python
+    llama = Llama3_1(name='llama', checkpoint="other_checkpoint_name")  # Initialize with a custom checkpoint
+    ```
+    """
+
+    checkpoint: str = field(default="meta-llama/Meta-Llama-3-8B-Instruct")
+
+
+@define(kw_only=True)
+class Llama3_1(TransformersLLM):
     """A pre-trained language model from MetaAI for tasks such as text generation, question answering, and more. [Details](https://llama.meta.com)
 
     :param name: An arbitrary name given to the model.
@@ -196,7 +222,7 @@ class Llama3_1(LLM):
 
 
 @define(kw_only=True)
-class Idefics2(LLM):
+class Idefics2(TransformersMLLM):
     """A pre-trained visual language model from HuggingFace for tasks such as visual question answering. [Details](https://huggingface.co/HuggingFaceM4/idefics2-8b)
 
     :param name: An arbitrary name given to the model.
@@ -220,7 +246,7 @@ class Idefics2(LLM):
 
 
 @define(kw_only=True)
-class Llava(LLM):
+class Llava(TransformersMLLM):
     """LLaVA is an open-source chatbot trained by fine-tuning LLM on multimodal instruction-following data. It is an auto-regressive language model, based on the transformer architecture. [Details](https://llava-vl.github.io/)
 
     :param name: An arbitrary name given to the model.
@@ -244,7 +270,7 @@ class Llava(LLM):
 
 
 @define(kw_only=True)
-class InstructBlip(LLM):
+class InstructBlip(TransformersMLLM):
     """An open-source general purpose vision language model by SalesForce built using instruction-tuning. [Details](https://arxiv.org/abs/2305.06500)
 
     :param name: An arbitrary name given to the model.
