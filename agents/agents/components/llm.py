@@ -176,8 +176,7 @@ class LLM(ModelComponent):
                 if self.config.add_metadata
                 else "\n".join(doc for doc in result["output"]["documents"])
             )
-            return f"{rag_docs}{query}"
-        return query
+            return rag_docs
 
     def _handle_chat_history(self, message: dict) -> List:
         if self.config.chat_history:
@@ -227,14 +226,18 @@ class LLM(ModelComponent):
         if query is None:
             return None
 
+        # get RAG results if enabled in config and if docs retreived
+        rag_result = self._make_rag_query(query) if self.config.enable_rag else None
+
         # set system prompt template
         query = (
             self._component_template.render(context)
             if self._component_template
             else query
         )
-        # add rag docs to query if enabled in config and if docs retreived
-        query = self._make_rag_query(query) if self.config.enable_rag else query
+
+        # attach rag results to templated query if available
+        query = f"{rag_result}\n{query}" if rag_result else query
 
         message = {"role": "user", "content": query}
 
