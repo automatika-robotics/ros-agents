@@ -57,7 +57,11 @@ def llm_answer_to_goal_point(output: str) -> Optional[np.ndarray]:
         json_dict = json.loads(json_string)
         coordinates = np.fromstring(json_dict["position"], sep=",", dtype=np.float64)
         print("Coordinates Extracted:", coordinates)
-        if coordinates.shape[0] < 3:
+        if coordinates.shape[0] < 2 or coordinates.shape[0] > 3:
+            return
+        elif (
+            coordinates.shape[0] == 2
+        ):  # sometimes LLMs avoid adding the zeros of z-dimension
             coordinates = np.append(coordinates, 0)
         return coordinates
     except Exception:
