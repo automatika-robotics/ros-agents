@@ -178,15 +178,24 @@ goto.set_component_prompt(
 )
 
 
+# pre-process the output before publishing to a topic of msg_type PoseStamped
 def llm_answer_to_goal_point(output: str) -> Optional[np.ndarray]:
     # extract the json part of the output string (including brackets)
     # one can use sophisticated regex parsing here but we'll keep it simple
-    json_string = output[output.find("{") : output.find("}") + 1]
+    json_string = output[output.find("{") : output.rfind("}") + 1]
     # load the string as a json and extract position coordinates
     # if there is an error, return None, i.e. no output would be published to goal_point
     try:
         json_dict = json.loads(json_string)
-        return np.array(json_dict["position"])
+        coordinates = np.fromstring(json_dict["position"], sep=",", dtype=np.float64)
+        print("Coordinates Extracted:", coordinates)
+        if coordinates.shape[0] < 2 or coordinates.shape[0] > 3:
+            return
+        elif (
+            coordinates.shape[0] == 2
+        ):  # sometimes LLMs avoid adding the zeros of z-dimension
+            coordinates = np.append(coordinates, 0)
+        return coordinates
     except Exception:
         return
 
@@ -241,7 +250,8 @@ router = SemanticRouter(
 )
 
 # Launch the components
-launcher = Launcher(
+launcher = Launcher()
+launcher.add_pkg(
     components=[
         mllm,
         llm,
