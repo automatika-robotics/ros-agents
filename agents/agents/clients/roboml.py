@@ -4,19 +4,12 @@ from enum import Enum
 from typing import Any, Optional
 
 import httpx
-import msgpack
-import msgpack_numpy as m_pack
-from redis import Redis
-from redis.exceptions import ConnectionError, ModuleError
 
-from ..models import Model, OllamaModel
+from ..models import Model, OllamaModel, TransformersLLM, TransformersMLLM
 from ..utils import encode_arr_base64
 from ..vectordbs import DB
 from .db_base import DBClient
 from .model_base import ModelClient
-
-# patch msgpack for numpy arrays
-m_pack.patch()
 
 __all__ = ["HTTPModelClient", "HTTPDBClient", "RESPDBClient", "RESPModelClient"]
 
@@ -45,13 +38,22 @@ class HTTPModelClient(ModelClient):
         host: str = "127.0.0.1",
         port: int = 8000,
         inference_timeout: int = 30,
+        init_on_activation: bool = True,
         logging_level: str = "info",
     ):
         if isinstance(model, OllamaModel):
             raise TypeError(
                 "An ollama model cannot be passed to a RoboML client. Please use the OllamaClient"
             )
-        super().__init__(model, host, port, inference_timeout, logging_level)
+        super().__init__(
+            model=model,
+            host=host,
+            port=port,
+            inference_timeout=inference_timeout,
+            init_on_activation=init_on_activation,
+            logging_level=logging_level,
+        )
+        self.model_type = self.model.__class__
         self.url = f"http://{self.host}:{self.port}"
         self._check_connection()
 
@@ -72,7 +74,13 @@ class HTTPModelClient(ModelClient):
         """
         # Create a model node on RoboML
         self.logger.info("Creating model node on remote")
-        start_params = {"node_name": self.model.name, "node_type": self.model_type}
+        if issubclass(self.model_type, TransformersLLM):
+            model_type = TransformersLLM.__name__
+        elif issubclass(self.model_type, TransformersMLLM):
+            model_type = TransformersMLLM.__name__
+        else:
+            model_type = self.model_type.__name__
+        start_params = {"node_name": self.model.name, "node_type": model_type}
         try:
             httpx.post(
                 f"{self.url}/add_node", params=start_params, timeout=self.init_timeout
@@ -169,9 +177,17 @@ class HTTPDBClient(DBClient):
         host: str = "127.0.0.1",
         port: int = 8000,
         response_timeout: int = 30,
+        init_on_activation: bool = True,
         logging_level: str = "info",
     ):
-        super().__init__(db, host, port, logging_level)
+        super().__init__(
+            db=db,
+            host=host,
+            port=port,
+            init_on_activation=init_on_activation,
+            logging_level=logging_level,
+        )
+        self.db_type = self.db.__class__
         self.url = f"http://{self.host}:{self.port}"
         self.response_timeout = response_timeout
         self._check_connection()
@@ -193,7 +209,7 @@ class HTTPDBClient(DBClient):
         """
         # Create a DB node on RoboML
         self.logger.info("Creating db node on remote")
-        start_params = {"node_name": self.db.name, "node_type": self.db_type}
+        start_params = {"node_name": self.db.name, "node_type": self.db_type.__name__}
         try:
             httpx.post(
                 f"{self.url}/add_node", params=start_params, timeout=self.init_timeout
@@ -338,15 +354,39 @@ class RESPModelClient(ModelClient):
         host: str = "127.0.0.1",
         port: int = 6379,
         inference_timeout: int = 30,
+        init_on_activation: bool = True,
         logging_level: str = "info",
     ):
         if isinstance(model, OllamaModel):
             raise TypeError(
                 "An ollama model cannot be passed to a RoboML client. Please use the OllamaClient"
             )
-        super().__init__(model, host, port, inference_timeout, logging_level)
-        # TODO: handle timeoout
-        self.redis = Redis(self.host, port=self.port)
+        super().__init__(
+            model=model,
+            host=host,
+            port=port,
+            inference_timeout=inference_timeout,
+            init_on_activation=init_on_activation,
+            logging_level=logging_level,
+        )
+        self.model_type = self.model.__class__
+        try:
+            import msgpack
+            import msgpack_numpy as m_pack
+
+            # patch msgpack for numpy arrays
+            m_pack.patch()
+            from redis import Redis
+
+            # TODO: handle timeout
+            self.redis = Redis(self.host, port=self.port)
+            self.packer = msgpack.packb
+            self.unpacker = msgpack.unpackb
+
+        except ModuleNotFoundError as e:
+            raise ModuleNotFoundError(
+                "In order to use the RESP clients, you need redis and msgpack packages installed. You can install it with 'pip install redis[hiredis] msgpack msgpack_numpy'"
+            ) from e
         self._check_connection()
 
     def _check_connection(self) -> None:
@@ -365,21 +405,23 @@ class RESPModelClient(ModelClient):
         """
         # Create a model node on RoboML
         self.logger.info("Creating model node on remote")
-        start_params = {"node_name": self.model.name, "node_type": self.model_type}
+        if issubclass(self.model_type, TransformersLLM):
+            model_type = TransformersLLM.__name__
+        elif issubclass(self.model_type, TransformersMLLM):
+            model_type = TransformersMLLM.__name__
+        else:
+            model_type = self.model_type.__name__
+        start_params = {"node_name": self.model.name, "node_type": model_type}
         try:
-            start_params_b = msgpack.packb(start_params)
+            start_params_b = self.packer(start_params)
             self.redis.execute_command("add_node", start_params_b)
 
             self.logger.info(f"Initializing {self.model.name} on RoboML remote")
             # make initialization params
             model_dict = self.model._get_init_params()
-            if hasattr(self.model, "system_prompt") and (
-                sys_prompt := self.model.system_prompt  # type: ignore
-            ):
-                model_dict["system_prompt"] = sys_prompt
 
             # initialize model
-            init_b = msgpack.packb(model_dict)
+            init_b = self.packer(model_dict)
             self.redis.execute_command(f"{self.model.name}.initialize", init_b)
         except Exception as e:
             return self.__handle_exceptions(e)
@@ -408,12 +450,12 @@ class RESPModelClient(ModelClient):
     def _inference(self, inference_input: dict[str, Any]) -> Optional[dict]:
         """Call inference on the model using data and inference parameters from the component"""
         try:
-            data_b = msgpack.packb(inference_input)
+            data_b = self.packer(inference_input)
             # call inference method
             result_b = self.redis.execute_command(
                 f"{self.model.name}.inference", data_b
             )
-            result = msgpack.unpackb(result_b)
+            result = self.unpacker(result_b)
         except Exception as e:
             return self.__handle_exceptions(e)
 
@@ -429,7 +471,7 @@ class RESPModelClient(ModelClient):
         self.logger.error(f"Deinitializing {self.model.name} on RoboML remote")
         stop_params = {"node_name": self.model.name}
         try:
-            stop_params_b = msgpack.packb(stop_params)
+            stop_params_b = self.packer(stop_params)
             self.redis.execute_command("remove_node", stop_params_b)
         except Exception as e:
             self.__handle_exceptions(e)
@@ -440,7 +482,7 @@ class RESPModelClient(ModelClient):
         """
         try:
             status_b = self.redis.execute_command(f"{self.model.name}.get_status")
-            status = msgpack.unpackb(status_b)
+            status = self.unpacker(status_b)
         except Exception as e:
             return self.__handle_exceptions(e)
 
@@ -453,6 +495,8 @@ class RESPModelClient(ModelClient):
         :type excep: Exception
         :rtype: None
         """
+        from redis.exceptions import ConnectionError, ModuleError
+
         if isinstance(excep, ConnectionError):
             self.logger.error(
                 f"{excep} RoboML server inaccessible. Might not be running. Make sure remote is correctly configured."
@@ -476,11 +520,34 @@ class RESPDBClient(DBClient):
         db: DB,
         host: str = "127.0.0.1",
         port: int = 6379,
+        init_on_activation: bool = True,
         logging_level: str = "info",
     ):
-        super().__init__(db, host, port, logging_level)
-        # TODO: handle timeout
-        self.redis = Redis(self.host, port=self.port)
+        super().__init__(
+            db=db,
+            host=host,
+            port=port,
+            init_on_activation=init_on_activation,
+            logging_level=logging_level,
+        )
+        self.db_type = self.db.__class__
+        try:
+            import msgpack
+            import msgpack_numpy as m_pack
+
+            # patch msgpack for numpy arrays
+            m_pack.patch()
+            from redis import Redis
+
+            # TODO: handle timeout
+            self.redis = Redis(self.host, port=self.port)
+            self.packer = msgpack.packb
+            self.unpacker = msgpack.unpackb
+
+        except ModuleNotFoundError as e:
+            raise ModuleNotFoundError(
+                "In order to use the RESP clients, you need redis and msgpack packages installed. You can install it with 'pip install redis[hiredis] msgpack msgpack_numpy'"
+            ) from e
         self._check_connection()
 
     def _check_connection(self) -> None:
@@ -499,10 +566,10 @@ class RESPDBClient(DBClient):
         """
         # Creating DB node on remote
         self.logger.info("Creating db node on remote")
-        start_params = {"node_name": self.db.name, "node_type": self.db_type}
+        start_params = {"node_name": self.db.name, "node_type": self.db_type.__name__}
 
         try:
-            start_params_b = msgpack.packb(start_params)
+            start_params_b = self.packer(start_params)
             self.redis.execute_command("add_node", start_params_b)
         except Exception as e:
             self.__handle_exceptions(e)
@@ -510,7 +577,7 @@ class RESPDBClient(DBClient):
         self.logger.info(f"Initializing {self.db.name} on remote")
         try:
             db_dict = self.db._get_init_params()
-            init_b = msgpack.packb(db_dict)
+            init_b = self.packer(db_dict)
             # initialize database
             self.redis.execute_command(f"{self.db.name}.initialize", init_b)
         except Exception as e:
@@ -544,10 +611,10 @@ class RESPDBClient(DBClient):
         :rtype: dict | None
         """
         try:
-            data_b = msgpack.packb(db_input)
+            data_b = self.packer(db_input)
             # add to DB
             result_b = self.redis.execute_command(f"{self.db.name}.add", data_b)
-            result = msgpack.unpackb(result_b)
+            result = self.unpacker(result_b)
         except Exception as e:
             return self.__handle_exceptions(e)
 
@@ -562,12 +629,12 @@ class RESPDBClient(DBClient):
         :rtype: dict | None
         """
         try:
-            data_b = msgpack.packb(db_input)
+            data_b = self.packer(db_input)
             # add to DB
             result_b = self.redis.execute_command(
                 f"{self.db.name}.conditional_add", data_b
             )
-            result = msgpack.unpackb(result_b)
+            result = self.unpacker(result_b)
         except Exception as e:
             return self.__handle_exceptions(e)
 
@@ -582,12 +649,12 @@ class RESPDBClient(DBClient):
         :rtype: dict | None
         """
         try:
-            data_b = msgpack.packb(db_input)
+            data_b = self.packer(db_input)
             # query db
             result_b = self.redis.execute_command(
                 f"{self.db.name}.metadata_query", data_b
             )
-            result = msgpack.unpackb(result_b)
+            result = self.unpacker(result_b)
         except Exception as e:
             return self.__handle_exceptions(e)
 
@@ -602,10 +669,10 @@ class RESPDBClient(DBClient):
         :rtype: dict | None
         """
         try:
-            data_b = msgpack.packb(db_input)
+            data_b = self.packer(db_input)
             # query db
             result_b = self.redis.execute_command(f"{self.db.name}.query", data_b)
-            result = msgpack.unpackb(result_b)
+            result = self.unpacker(result_b)
         except Exception as e:
             return self.__handle_exceptions(e)
 
@@ -619,7 +686,7 @@ class RESPDBClient(DBClient):
         self.logger.error(f"Deinitializing {self.db.name} on remote")
         stop_params = {"node_name": self.db.name}
         try:
-            stop_params_b = msgpack.packb(stop_params)
+            stop_params_b = self.packer(stop_params)
             self.redis.execute_command("remove_node", stop_params_b)
         except Exception as e:
             self.__handle_exceptions(e)
@@ -630,7 +697,7 @@ class RESPDBClient(DBClient):
         """
         try:
             status_b = self.redis.execute_command(f"{self.db.name}.get_status")
-            status = msgpack.unpackb(status_b)
+            status = self.unpacker(status_b)
         except Exception as e:
             return self.__handle_exceptions(e)
 
@@ -643,6 +710,8 @@ class RESPDBClient(DBClient):
         :type excep: Exception
         :rtype: None
         """
+        from redis.exceptions import ConnectionError, ModuleError
+
         if isinstance(excep, ConnectionError):
             self.logger.error(
                 f"{excep} RoboML server inaccessible. Might not be running. Make sure remote is correctly configured."

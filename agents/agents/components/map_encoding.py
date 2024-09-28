@@ -5,8 +5,7 @@ import numpy as np
 from ..clients.db_base import DBClient
 from ..config import MapConfig
 from ..ros import (
-    FixedInput,
-    MapMetaData,
+    OccupancyGrid,
     Odometry,
     String,
     Topic,
@@ -20,15 +19,15 @@ from .component_base import Component, ComponentRunType
 
 class MapEncoding(Component):
     """Map encoding component that encodes text information as a semantic map based on the robots localization.
-    It takes in map layers, position topic, map meta data topic, and a vector database client.
+    It takes in map layers, position topic, map occupancy grid topic, and a vector database client.
     Map layers can be arbitrary text based outputs from other components such as MLLMs or Vision.
 
     :param layers: A list of map layer objects to be encoded.
     :type layers: list[MapLayer]
     :param position: The topic for the current robot position.
     :type position: Topic
-    :param map_meta_data: The topic for storing and retrieving map metadata.
-    :type map_meta_data: Topic
+    :param map_topic: The OccupancyGrid topic for storing and retrieving map data.
+    :type map_topic: Topic
     :param config: The configuration for the map encoding component.
     :type config: MapConfig
     :param db_client: A database client to store and retrieve map data.
@@ -41,7 +40,7 @@ class MapEncoding(Component):
     Example usage:
     ```python
     position_topic = Topic(name="position", msg_type="Odometry")
-    map_meta_data_topic = Topic(name="map_meta_data", msg_type="MapMetaData")
+    map_topic = Topic(name="map", msg_type="OccupancyGrid")
     config = MapConfig(map_name="map")
     db_client = DBClient(db=ChromaDB("database_name"))
     layers = [MapLayer(subscribes_to=text1, resolution_multiple=3),
@@ -49,7 +48,7 @@ class MapEncoding(Component):
     map_encoding_component = MapEncoding(
         layers=layers,
         position=position_topic,
-        map_meta_data=map_meta_data_topic,
+        map_topic=map_topic,
         config=config,
         db_client=db_client,
     )
@@ -62,7 +61,7 @@ class MapEncoding(Component):
         *,
         layers: list[MapLayer],
         position: Topic,
-        map_meta_data: Topic,
+        map_topic: Topic,
         config: MapConfig,
         db_client: DBClient,
         trigger: Union[Topic, list[Topic], float] = 10.0,
@@ -72,13 +71,12 @@ class MapEncoding(Component):
     ):
         self.config: MapConfig = config
         self.allowed_inputs = {
-            "Required": [String, Odometry, MapMetaData],
+            "Required": [String, Odometry, OccupancyGrid],
             "Optional": [Detections],
         }
         self.db_client = db_client
         self.position = position
-        self.map_meta_data = map_meta_data
-        self._layers(layers)
+        self.map_topic = map_topic
         super().__init__(
             None,
             None,
@@ -89,12 +87,15 @@ class MapEncoding(Component):
             **kwargs,
         )
 
+        # create layers
+        self._layers(layers)
+
     def activate(self):
         """activate."""
         self.get_logger().debug(f"Current Status: {self.health_status.value}")
         # initialize db client
-        self.db_client._check_connection()
-        self.db_client._initialize()
+        self.db_client.check_connection()
+        self.db_client.initialize()
 
         # activate the rest
         super().activate()
@@ -110,8 +111,8 @@ class MapEncoding(Component):
         super().deactivate()
 
         # deactivate db client
-        self.db_client._check_connection()
-        self.db_client._deinitialize()
+        self.db_client.check_connection()
+        self.db_client.deinitialize()
 
     def _fill_out_pre_defined(
         self,
@@ -165,7 +166,7 @@ class MapEncoding(Component):
             to_be_added["documents"].append(data[1])
             to_be_added["metadatas"].append(metadata)
 
-        self.db_client._add(to_be_added)
+        self.db_client.add(to_be_added)
 
     def _get_layer_data(
         self, time_stamp, map_coordinates
@@ -246,17 +247,17 @@ class MapEncoding(Component):
 
         # process position and meta data inputs
         position = self.callbacks[self.position.name].get_output()
-        map_meta_data = self.callbacks[self.map_meta_data.name].get_output()
+        map_data = self.callbacks[self.map_topic.name].get_output(get_metadata=True)
 
         # if position or map meta data is not received, do nothing
-        if position is None or map_meta_data is None:
+        if position is None or map_data is None:
             self.get_logger().warning(
-                f"Received position: {position}, map_meta_data:{map_meta_data}. Not sending data to map DB."
+                f"Received position: {position}, map_meta_data: {map_data}. Not sending data to map DB."
             )
             return
 
         # calculate relative coordinates (using configuration elements of position)
-        map_coordinates = self._get_map_coordinates(position[:3], map_meta_data)
+        map_coordinates = self._get_map_coordinates(position[:3], map_data)
 
         # create input dict
         to_be_added, to_be_checked = self._get_layer_data(time_stamp, map_coordinates)
@@ -266,9 +267,9 @@ class MapEncoding(Component):
             return
 
         if to_be_added:
-            self.db_client._add(to_be_added)
+            self.db_client.add(to_be_added)
         if to_be_checked:
-            self.db_client._conditional_add(to_be_checked)
+            self.db_client.conditional_add(to_be_checked)
 
     def _get_map_coordinates(
         self, position: np.ndarray, map_meta_data: dict
@@ -296,7 +297,7 @@ class MapEncoding(Component):
         """
         self.layers_dict = {layer.subscribes_to.name: layer for layer in layers}
         layer_topics = [layer.subscribes_to for layer in layers]
-        all_inputs = [*layer_topics, self.position, self.map_meta_data]
+        all_inputs = [*layer_topics, self.position, self.map_topic]
         self.validate_topics(all_inputs, self.allowed_inputs, "Inputs")
         self.callbacks = {
             input.name: input.msg_type.callback(input) for input in all_inputs
@@ -314,8 +315,3 @@ class MapEncoding(Component):
         :rtype: None
         """
         self._fill_out_pre_defined(layer, point)
-
-    def inputs(self, inputs: list[Union[Topic, FixedInput]]):
-        raise NotImplementedError(
-            "Use map_object.layers instead of map_object.inputs, to pass layers to MapEncoding component."
-        )

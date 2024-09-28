@@ -29,13 +29,12 @@ cd agents_ws/src
 
 Install python dependencies
 ```shell
-pip install -U pillow numpy opencv-python-headless hiredis msgpack msgpack_numpy 'attrs>=23.2.0'`
+pip install pillow numpy opencv-python-headless 'attrs>=23.2.0' jinja2 httpx
 ```
 
-Download ROS Sugar and Automatika ROS (common utils) packages.
+Download ROS Sugar.
 ```shell
 git clone https://github.com/automatika-robotics/ros-sugar
-git clone https://github.com/automatika-robotics/automatika-ros
 ```
 ### Install ROS Agents
 ```shell

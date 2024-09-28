@@ -2,12 +2,13 @@ from typing import Optional
 import os
 import cv2
 import numpy as np
-from auto_ros.callbacks import (
+from ros_sugar.io import (
     GenericCallback,
     TextCallback,
-    _image_pre_processing,
     get_logger,
 )
+
+from ros_sugar.io.utils import image_pre_processing
 
 from .utils import create_detection_context
 
@@ -68,7 +69,7 @@ class VideoCallback(GenericCallback):
             # pre-process in case of weird encodings and reshape ROS topic
             video = []
             for img in self.msg.frames:
-                video.append(_image_pre_processing(img))
+                video.append(image_pre_processing(img))
             return np.array(video)
 
 

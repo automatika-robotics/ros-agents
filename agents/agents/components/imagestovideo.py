@@ -68,7 +68,7 @@ class VideoMessageMaker(Component):
         super().__init__(
             inputs,
             outputs,
-            config,
+            self.config,
             trigger,
             callback_group,
             component_name,

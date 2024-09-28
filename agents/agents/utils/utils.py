@@ -14,12 +14,11 @@ from attrs import Attribute
 from jinja2 import Environment, FileSystemLoader, TemplateSyntaxError
 from jinja2.environment import Template
 from PIL import Image
-from pypdf import PdfReader
 from rclpy.logging import get_logger
 from .pluralize import pluralize
 
 
-def create_detection_context(obj_list: list | None) -> str:
+def create_detection_context(obj_list: Optional[list]) -> str:
     """
     Creates a context prompt based on detections.
     :param      detections:  The detections
@@ -100,7 +99,7 @@ def validate_kwargs(_, attribute: Attribute, value: dict):
             value[k] = v
 
 
-def check_type_from_signature(value, fn_param: inspect.Parameter) -> None:
+def _check_type_from_signature(value, fn_param: inspect.Parameter) -> None:
     """Check parameter value type based on parameter signature.
     :param value:
     :param fn_param:
@@ -125,7 +124,7 @@ def check_type_from_signature(value, fn_param: inspect.Parameter) -> None:
         )
 
 
-def check_type_from_default(value, fn_param: inspect.Parameter) -> None:
+def _check_type_from_default(value, fn_param: inspect.Parameter) -> None:
     """Check parameter value type based on default value.
     :param value:
     :param fn_param:
@@ -160,18 +159,18 @@ def validate_func_args(func):
         # for parameters with annotation, preference is given to checking by annotation
         for arg, param in zip(args, list(fn_params)[:args_count]):
             if fn_params[param].annotation is not fn_params[param].empty:
-                check_type_from_signature(arg, fn_params[param])
+                _check_type_from_signature(arg, fn_params[param])
             elif fn_params[param].default is not fn_params[param].empty:
-                check_type_from_default(arg, fn_params[param])
+                _check_type_from_default(arg, fn_params[param])
 
         for kwarg, value in kwargs.items():
             param = fn_params.get(kwarg)
             if not param:
                 continue
             if fn_params[kwarg].annotation is not fn_params[kwarg].empty:
-                check_type_from_signature(value, fn_params[kwarg])
+                _check_type_from_signature(value, fn_params[kwarg])
             elif fn_params[kwarg].default is not fn_params[kwarg].empty:
-                check_type_from_default(value, fn_params[kwarg])
+                _check_type_from_default(value, fn_params[kwarg])
 
         # Call the function after validation
         result = func(*args, **kwargs)
@@ -214,6 +213,12 @@ class PDFReader:
         :type password: Optional[str]
         :rtype: None
         """
+        try:
+            from pypdf import PdfReader
+        except ModuleNotFoundError as e:
+            raise ModuleNotFoundError(
+                "In order to use the PDFReader, you need pypdf package installed. You can install it with 'pip install pypdf'"
+            ) from e
         if not Path(pdf_file).is_file():
             raise TypeError(f"{pdf_file} is not a valid file")
         try:

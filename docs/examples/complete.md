@@ -50,8 +50,6 @@ query_answer = Topic(name="answer", msg_type="String")
 
 t2s_config = TextToSpeechConfig(play_on_device=True)
 
-speecht5 = SpeechT5(name="speecht5")
-roboml_speecht5 = HTTPModelClient(speecht5)
 text_to_speech = TextToSpeech(
     inputs=[query_answer],
     trigger=query_answer,
@@ -119,13 +117,13 @@ layer1 = MapLayer(subscribes_to=detections_topic, temporal_change=True)
 layer2 = MapLayer(subscribes_to=introspection_answer, resolution_multiple=3)
 
 position = Topic(name="odom", msg_type="Odometry")
-map_meta_data = Topic(name="map_meta_data", msg_type="MapMetaData")
+map_topic = Topic(name="map", msg_type="OccupancyGrid")
 
 map_conf = MapConfig(map_name="map")
 map = MapEncoding(
     layers=[layer1, layer2],
     position=position,
-    map_meta_data=map_meta_data,
+    map_topic=map_topic,
     config=map_conf,
     db_client=chroma_client,
     trigger=15.0,
@@ -148,19 +146,22 @@ goto_query = Topic(name="goto_query", msg_type="String")
 goto_answer = Topic(name="goto_answer", msg_type="String")
 goal_point = Topic(name="goal_point", msg_type="PoseStamped")
 
-config = LLMConfig(enable_rag=True,
-                   collection_name="map",
-                   distance_func="l2",
-                   n_results=1,
-                   add_metadata=True)
+goto_config = LLMConfig(
+    enable_rag=True,
+    collection_name="map",
+    distance_func="l2",
+    n_results=1,
+    add_metadata=True,
+)
 
 goto = LLM(
     inputs=[goto_query],
     outputs=[goto_answer, goal_point],
     model_client=llama_client,
+    config=goto_config,
     db_client=chroma_client,
     trigger=goto_query,
-    component_name='go_to_x'
+    component_name="go_to_x",
 )
 
 goto.set_component_prompt(
@@ -169,15 +170,22 @@ goto.set_component_prompt(
 )
 
 
+# pre-process the output before publishing to a topic of msg_type PoseStamped
 def llm_answer_to_goal_point(output: str) -> Optional[np.ndarray]:
     # extract the json part of the output string (including brackets)
     # one can use sophisticated regex parsing here but we'll keep it simple
-    json_string = output[output.find("{"):output.find("}") + 1]
+    json_string = output[output.find("{") : output.rfind("}") + 1]
     # load the string as a json and extract position coordinates
     # if there is an error, return None, i.e. no output would be published to goal_point
     try:
         json_dict = json.loads(json_string)
-        return np.array(json_dict['position'])
+        coordinates = np.fromstring(json_dict["position"], sep=',', dtype=np.float64)
+        print('Coordinates Extracted:', coordinates)
+        if coordinates.shape[0] < 2 or coordinates.shape[0] > 3:
+            return
+        elif coordinates.shape[0] == 2:  # sometimes LLMs avoid adding the zeros of z-dimension
+            coordinates = np.append(coordinates, 0)
+        return coordinates
     except Exception:
         return
 
@@ -210,7 +218,8 @@ router = SemanticRouter(
 )
 
 # Launch the components
-launcher = Launcher(
+launcher = Launcher()
+launcher.add_pkg(
     components=[
         mllm,
         llm,

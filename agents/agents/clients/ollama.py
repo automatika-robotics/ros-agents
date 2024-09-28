@@ -18,6 +18,7 @@ class OllamaClient(ModelClient):
         host: str = "127.0.0.1",
         port: int = 11434,
         inference_timeout: int = 30,
+        init_on_activation: bool = True,
         logging_level: str = "info",
     ):
         self.model: LLM = model
@@ -30,7 +31,14 @@ class OllamaClient(ModelClient):
             raise ModuleNotFoundError(
                 "In order to use the OllamaClient, you need ollama-python package installed. You can install it with 'pip install ollama'"
             ) from e
-        super().__init__(model, host, port, inference_timeout, logging_level)
+        super().__init__(
+            model=model,
+            host=host,
+            port=port,
+            inference_timeout=inference_timeout,
+            init_on_activation=init_on_activation,
+            logging_level=logging_level,
+        )
         self._check_connection()
 
     def _check_connection(self) -> None:
@@ -81,12 +89,20 @@ class OllamaClient(ModelClient):
         # create input
         input = {
             "model": self.model.checkpoint,
-            "prompt": query,
+            "messages": query,
         }
         inference_input.pop("query")
+
+        # make images parth of the latest message in message list
         if images := inference_input.get("images"):
-            input["images"] = [encode_arr_base64(img) for img in images]
+            input["messages"][-1]["images"] = [encode_arr_base64(img) for img in images]
             inference_input.pop("images")
+
+        # Add tools as part of input, if available
+        if tools := inference_input.get("tools"):
+            input["tools"] = tools
+            inference_input.pop("tools")
+
         # ollama uses num_predict for max_new_tokens
         if inference_input.get("max_new_tokens"):
             inference_input["num_predict"] = inference_input["max_new_tokens"]
@@ -97,19 +113,24 @@ class OllamaClient(ModelClient):
         try:
             # set timeout on underlying httpx client
             self.client._client.timeout = self.inference_timeout
-            ollama_result = self.client.generate(**input)
+            ollama_result = self.client.chat(**input)
         except Exception as e:
             self.logger.error(str(e))
             return None
 
         self.logger.debug(str(ollama_result))
 
-        # replace np images back in inference input
+        # Add np images back in inference input
         if images:
             input["images"] = images
 
         # make result part of the input
-        input["output"] = ollama_result["response"]  # type: ignore
+        input["output"] = ollama_result["message"]["content"]  # type: ignore
+
+        # if tool calls exist
+        if tool_calls := ollama_result["message"].get("tool_calls"):  # type: ignore
+            input["tool_calls"] = tool_calls
+
         return input
 
     def _deinitialize(self):

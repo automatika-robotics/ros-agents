@@ -231,7 +231,9 @@ router = SemanticRouter(
 )
 
 # Launch the components
-launcher = Launcher(components=[llm, goto, router],
-                    activate_all_components_on_start=True)
+launcher = Launcher()
+launcher.add_pkg(
+    components=[llm, goto, router],
+    activate_all_components_on_start=True)
 launcher.bringup()
 ```

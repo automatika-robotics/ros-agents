@@ -4,31 +4,32 @@ from typing import Union, Any
 import numpy as np
 from attrs import define, field, Factory
 
-# FROM AUTOROS
-from auto_ros.supported_types import (
+# FROM ROS_SUGAR
+from ros_sugar.supported_types import (
     SupportedType,
     Audio,
     Image,
-    MapMetaData,
+    OccupancyGrid,
     Odometry,
     String,
     ROSImage,
 )
-from auto_ros.topic import (
-    BaseTopic,
-    QoSConfig,
-    _normalize_topic_name,
-    supported_types,
+from ros_sugar.io import (
     get_all_msg_types,
     get_msg_type,
+    Topic as BaseTopic,
 )
 
-# FROM ROS_SUGAR
-from ros_sugar import base_validators
-from ros_sugar.base_attrs import BaseAttrs
-from ros_sugar.config import BaseComponentConfig, ComponentRunType
-from ros_sugar.component import BaseComponent
-from ros_sugar.launcher import Launcher
+from ros_sugar.io.topic import _normalize_topic_name
+from ros_sugar.config import (
+    BaseComponentConfig,
+    ComponentRunType,
+    QoSConfig,
+    BaseAttrs,
+    base_validators,
+)
+from ros_sugar.core import BaseComponent
+from ros_sugar import Launcher
 from ros_sugar.utils import component_action
 
 # LEIBNIZ TYPES
@@ -44,7 +45,7 @@ __all__ = [
     "String",
     "Audio",
     "Image",
-    "MapMetaData",
+    "OccupancyGrid",
     "Odometry",
     "Topic",
     "FixedInput",
@@ -57,13 +58,14 @@ __all__ = [
     "component_action",
     "MapLayer",
     "Route",
+    "QoSConfig",
 ]
 
 
 def get_msg_type_extra(
-    type_name: Union[type[supported_types.SupportedType], str],
-) -> Union[type[supported_types.SupportedType], str]:
-    """Closure around verification function in auto_ros to provide additional types."""
+    type_name: Union[type[SupportedType], str],
+) -> Union[type[SupportedType], str]:
+    """Closure around verification function in ros_sugar to provide additional types."""
     return get_msg_type(
         type_name, additional_types=[Video, Detection, Detections, Tracking, Trackings]
     )
@@ -218,7 +220,7 @@ class Topic(BaseTopic):
     """
 
     name: str = field(converter=_normalize_topic_name)
-    msg_type: Union[type[supported_types.SupportedType], str] = field(
+    msg_type: Union[type[SupportedType], str] = field(
         converter=get_msg_type_extra,
         validator=base_validators.in_(
             get_all_msg_types(
@@ -261,7 +263,7 @@ class FixedInput(BaseAttrs):
     """
 
     name: str = field(converter=_normalize_topic_name)
-    msg_type: Union[type[supported_types.SupportedType], str] = field(
+    msg_type: Union[type[SupportedType], str] = field(
         converter=get_msg_type_extra,
         validator=base_validators.in_(
             get_all_msg_types(

@@ -5,7 +5,7 @@ from typing import Any, Optional, Sequence, Union
 from ..clients.model_base import ModelClient
 from ..config import BaseComponentConfig
 from ..ros import FixedInput, Topic, SupportedType
-from .component_base import Component, ComponentRunType
+from .component_base import Component
 
 
 class ModelComponent(Component):
@@ -49,8 +49,8 @@ class ModelComponent(Component):
 
         # Initialize model
         if self.model_client:
-            self.model_client._check_connection()
-            self.model_client._initialize()
+            self.model_client.check_connection()
+            self.model_client.initialize()
 
         # Activate component
         super().activate()
@@ -64,8 +64,8 @@ class ModelComponent(Component):
 
         # Deinitialize model
         if self.model_client:
-            self.model_client._check_connection()
-            self.model_client._deinitialize()
+            self.model_client.check_connection()
+            self.model_client.deinitialize()
 
     def _validate_output_topics(self) -> None:
         """
@@ -93,37 +93,13 @@ class ModelComponent(Component):
             "This method needs to be implemented by child components."
         )
 
+    @abstractmethod
     def _execution_step(self, *args, **kwargs):
         """_execution_step.
 
         :param args:
         :param kwargs:
         """
-
-        if self.run_type is ComponentRunType.EVENT:
-            trigger = kwargs.get("topic")
-            if not trigger:
-                return
-            self.get_logger().info(f"Received trigger on topic {trigger.name}")
-        else:
-            time_stamp = self.get_ros_time().sec
-            self.get_logger().info(f"Sending at {time_stamp}")
-
-        # create inference input
-        inference_input = self._create_input(*args, **kwargs)
-        # call model inference
-        if not inference_input:
-            self.get_logger().warning("Input not received, not calling model inference")
-            return
-
-        # conduct inference
-        if self.model_client:
-            result = self.model_client._inference(inference_input)
-            # raise a fallback trigger via health status
-            if not result:
-                self.health_status.set_failure()
-            else:
-                # publish inference result
-                if result["output"] and hasattr(self, "publishers_dict"):
-                    for publisher in self.publishers_dict.values():
-                        publisher.publish(**result)
+        raise NotImplementedError(
+            "This method needs to be implemented by child components."
+        )

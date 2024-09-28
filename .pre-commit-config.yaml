@@ -20,12 +20,10 @@ repos:
 -   repo: https://github.com/econchick/interrogate
     rev: 1.7.0
     hooks:
+     # docstring coverage
     - id: interrogate
-      # Interrogate a codebase for docstring coverage.
-      args: [-vv,
-             --fail-under=80,
-             -c, pyproject.toml
-            ]
+      args: [-vv, --fail-under=80, -c, pyproject.toml]
+      pass_filenames: false
 
 
 ## Uncomment mypy for type-checking errors in pre-commit

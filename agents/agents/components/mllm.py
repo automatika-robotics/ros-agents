@@ -39,7 +39,7 @@ class MLLM(LLM):
     image0 = Topic(name="image0", msg_type="Image")
     text0 = Topic(name="text1", msg_type="String")
     config = MLLMConfig()
-    model = Idefics(name='idefics')
+    model = TransformersMLLM(name='idefics')
     model_client = ModelClient(model=model)
     mllm_component = MLLM(inputs=[text0, image0],
                           outputs=[text1],
@@ -91,6 +91,15 @@ class MLLM(LLM):
         if trigger := kwargs.get("topic"):
             query = self.trig_callbacks[trigger.name].get_output()
             context[trigger.name] = query
+
+            # handle chat reset
+            if (
+                self.config.chat_history
+                and query.strip().lower() == self.config.history_reset_phrase
+            ):
+                self.messages = []
+                return None
+
         else:
             query = None
 
@@ -111,19 +120,32 @@ class MLLM(LLM):
         if not query or not images:
             return None
 
+        # get RAG results if enabled in config and if docs retreived
+        rag_result = self._handle_rag_query(query)
+
         # set system prompt template
         query = (
             self._component_template.render(context)
             if self._component_template
             else query
         )
-        # add rag docs to query if enabled in config and if docs retreived
-        query = self._make_rag_query(query) if self.config.enable_rag else query
 
-        self.get_logger().debug(query)
+        # get RAG results if enabled in config and if docs retreived
+        query = f"{rag_result}\n{query}" if rag_result else query
 
-        return {
-            "query": query,
+        message = {"role": "user", "content": query}
+        self._handle_chat_history(message)
+
+        self.get_logger().debug(f"Input from component: {self.messages}")
+
+        input = {
+            "query": self.messages,
             "images": images,
             **self.config._get_inference_params(),
         }
+
+        # Add any tools, if registered
+        if self.tool_descriptions:
+            input["tools"] = self.tool_descriptions
+
+        return input

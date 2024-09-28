@@ -2,16 +2,16 @@
 The following model specification classes are meant to define a comman interface for initialization parameters for ML models across supported model serving platforms.
 """
 
-from typing import Optional, Annotated
+from typing import Optional
 
 from attrs import define, field
 from .ros import BaseAttrs, base_validators
 
 __all__ = [
     "Encoder",
+    "Llama3",
     "Llama3_1",
     "OllamaModel",
-    "Idefics",
     "Idefics2",
     "Llava",
     "Whisper",
@@ -21,10 +21,10 @@ __all__ = [
     "VisionModel",
 ]
 
+# ollama models map to model:latest tag
 _ollama_mapping = [
     "llava",
-    "llama3",
-    "llama3_1",
+    "llama3" "llama3_1",
     "phi3",
     "qwen2",
     "aya",
@@ -40,7 +40,7 @@ class Model(BaseAttrs):
 
     name: str
     checkpoint: str
-    init_timeout: int = field(default=600)  # 10 minutes
+    init_timeout: Optional[int] = field(default=None)
 
     def _get_init_params(self) -> dict:
         """Get init params for model initialization."""
@@ -55,7 +55,7 @@ class Encoder(Model):
     :type name: str
     :param checkpoint: The name of the pre-trained model's checkpoint. Default is "BAAI/bge-small-en".
     :type checkpoint: str
-    :param init_timeout: The timeout in seconds for the initialization process. Defaults to 10 minutes (600 seconds).
+    :param init_timeout: The timeout in seconds for the initialization process. Defaults to None.
     :type init_timeout: int, optional
     """
 
@@ -68,18 +68,18 @@ class LLM(Model):
 
     :param name: An arbitrary name given to the model.
     :type name: str
+    :param system_prompt: The system prompt used to initialize the model. If not provided, defaults to None.
+    :type system_prompt: str or None
     :param quantization: The quantization scheme used by the model. Can be one of "4bit", "8bit" or None (default is "4bit").
     :type quantization: str or None
-    :param history_reset_phrase: A phrase used to reset the conversation history. Defaults to "chat reset".
-    :type history_reset_phrase: str
-    :param init_timeout: The timeout in seconds for the initialization process. Defaults to 10 minutes (600 seconds).
+    :param init_timeout: The timeout in seconds for the initialization process. Defaults to None.
     :type init_timeout: int, optional
     """
 
+    system_prompt: Optional[str] = field(default=None)
     quantization: Optional[str] = field(
         default="4bit", validator=base_validators.in_(["4bit", "8bit", None])
     )
-    history_reset_phrase: str = field(default="chat reset")
 
     def _set_ollama_checkpoint(self):
         """Get ollama compatible checkpoint name."""
@@ -97,7 +97,7 @@ class LLM(Model):
         return {
             "checkpoint": self.checkpoint,
             "quantization": self.quantization,
-            "history_reset_phrase": self.history_reset_phrase,
+            "system_prompt": self.system_prompt,
         }
 
 
@@ -113,9 +113,7 @@ class OllamaModel(LLM):
     :type quantization: str or None
     :param system_prompt: The system prompt used to initialize the model. If not provided, defaults to None.
     :type system_prompt: str or None
-    :param history_reset_phrase: A phrase used to reset the conversation history. Defaults to "chat reset".
-    :type history_reset_phrase: str
-    :param init_timeout: The timeout in seconds for the initialization process. Defaults to 10 minutes (600 seconds).
+    :param init_timeout: The timeout in seconds for the initialization process. Defaults to None.
     :type init_timeout: int, optional
 
     Example usage:
@@ -124,12 +122,83 @@ class OllamaModel(LLM):
     ```
     """
 
-    system_prompt: Optional[str] = field(default=None)
     port: Optional[int] = field(default=11434)
 
 
 @define(kw_only=True)
-class Llama3_1(LLM):
+class TransformersLLM(LLM):
+    """An LLM model that needs to be initialized with any LLM checkpoint available on HuggingFace transformers. This model can be used with a roboml client.
+
+    :param name: An arbitrary name given to the model.
+    :type name: str
+    :param checkpoint: The name of the pre-trained model's checkpoint. Default is "microsoft/Phi-3-mini-4k-instruct". For available checkpoints consult [HuggingFace LLM Models](https://huggingface.co/models?other=LLM)
+    :type checkpoint: str
+    :param quantization: The quantization scheme used by the model. Can be one of "4bit", "8bit" or None (default is "4bit").
+    :type quantization: str or None
+    :param system_prompt: The system prompt used to initialize the model. If not provided, defaults to None.
+    :type system_prompt: str or None
+    :param init_timeout: The timeout in seconds for the initialization process. Defaults to None.
+    :type init_timeout: int, optional
+
+    Example usage:
+    ```python
+    llm = TransformersLLM(name='llm', checkpoint="meta-llama/Meta-Llama-3.1-8B-Instruct")
+    ```
+    """
+
+    checkpoint: str = field(default="microsoft/Phi-3-mini-4k-instruct")
+
+
+@define(kw_only=True)
+class TransformersMLLM(LLM):
+    """An MLLM model that needs to be initialized with any MLLM checkpoint available on HuggingFace transformers. This model can be used with a roboml client.
+
+    :param name: An arbitrary name given to the model.
+    :type name: str
+    :param checkpoint: The name of the pre-trained model's checkpoint. Default is "HuggingFaceM4/idefics2-8b". For available checkpoints consult [HuggingFace Image-Text to Text Models](https://huggingface.co/models?pipeline_tag=image-text-to-text)
+    :type checkpoint: str
+    :param quantization: The quantization scheme used by the model. Can be one of "4bit", "8bit" or None (default is "4bit").
+    :type quantization: str or None
+    :param system_prompt: The system prompt used to initialize the model. If not provided, defaults to None.
+    :type system_prompt: str or None
+    :param init_timeout: The timeout in seconds for the initialization process. Defaults to None.
+    :type init_timeout: int, optional
+
+    Example usage:
+    ```python
+    mllm = TransformersMLLM(name='mllm', checkpoint="gemma2:latest")
+    ```
+    """
+
+    checkpoint: str = field(default="HuggingFaceM4/idefics2-8b")
+
+
+@define(kw_only=True)
+class Llama3(TransformersLLM):
+    """A pre-trained language model from MetaAI for tasks such as text generation, question answering, and more. [Details](https://llama.meta.com)
+
+    :param name: An arbitrary name given to the model.
+    :type name: str
+    :param checkpoint: The name of the pre-trained model's checkpoint. Default is "meta-llama/Meta-Llama-3-8B-Instruct". For available checkpoints, consult [LLama3 checkpoints on HuggingFace](https://huggingface.co/models?search="llama3").
+    :type checkpoint: str
+    :param quantization: The quantization scheme used by the model. Can be one of "4bit", "8bit" or None (default is "4bit").
+    :type quantization: str or None
+    :param system_prompt: The system prompt used to initialize the model. If not provided, defaults to None.
+    :type system_prompt: str or None
+    :param init_timeout: The timeout in seconds for the initialization process. Defaults to None.
+    :type init_timeout: int, optional
+
+    Example usage:
+    ```python
+    llama = Llama3_1(name='llama', checkpoint="other_checkpoint_name")  # Initialize with a custom checkpoint
+    ```
+    """
+
+    checkpoint: str = field(default="meta-llama/Meta-Llama-3-8B-Instruct")
+
+
+@define(kw_only=True)
+class Llama3_1(TransformersLLM):
     """A pre-trained language model from MetaAI for tasks such as text generation, question answering, and more. [Details](https://llama.meta.com)
 
     :param name: An arbitrary name given to the model.
@@ -140,9 +209,7 @@ class Llama3_1(LLM):
     :type quantization: str or None
     :param system_prompt: The system prompt used to initialize the model. If not provided, defaults to None.
     :type system_prompt: str or None
-    :param history_reset_phrase: A phrase used to reset the conversation history. Defaults to "chat reset".
-    :type history_reset_phrase: str
-    :param init_timeout: The timeout in seconds for the initialization process. Defaults to 10 minutes (600 seconds).
+    :param init_timeout: The timeout in seconds for the initialization process. Defaults to None.
     :type init_timeout: int, optional
 
     Example usage:
@@ -151,50 +218,22 @@ class Llama3_1(LLM):
     ```
     """
 
-    system_prompt: Optional[str] = field(default=None)
     checkpoint: str = field(default="meta-llama/Meta-Llama-3.1-8B-Instruct")
 
 
-Llama3: Annotated[type[Llama3_1], "Alias for Llama3_1"] = Llama3_1
-
-
 @define(kw_only=True)
-class Idefics(LLM):
-    """A pre-trained visual language model from HuggingFace for tasks such as visual question answering. [Details](https://huggingface.co/blog/idefics)
-
-    :param name: An arbitrary name given to the model.
-    :type name: str
-    :param checkpoint: The name of the pre-trained model's checkpoint. Default is "HuggingFaceM4/idefics-9b-instruct".
-    :type checkpoint: str
-    :param quantization: The quantization scheme used by the model. Can be one of "4bit", "8bit" or None (default is "4bit").
-    :type quantization: str or None
-    :param history_reset_phrase: A phrase used to reset the conversation history. Defaults to "chat reset".
-    :type history_reset_phrase: str
-    :param init_timeout: The timeout in seconds for the initialization process. Defaults to 10 minutes (600 seconds).
-    :type init_timeout: int, optional
-
-    Example usage:
-    ```python
-    idefics = Idefics2(name='mllm1', quantization="8bit")  # Initialize with a custom checkpoint
-    ```
-    """
-
-    checkpoint: str = field(default="HuggingFaceM4/idefics-9b-instruct")
-
-
-@define(kw_only=True)
-class Idefics2(LLM):
+class Idefics2(TransformersMLLM):
     """A pre-trained visual language model from HuggingFace for tasks such as visual question answering. [Details](https://huggingface.co/HuggingFaceM4/idefics2-8b)
 
     :param name: An arbitrary name given to the model.
     :type name: str
     :param checkpoint: The name of the pre-trained model's checkpoint. Default is "HuggingFaceM4/idefics2-8b". For available checkpoints, consult [Idefics2 checkpoints on HuggingFace](https://huggingface.co/HuggingFaceM4/idefics2-8b).
     :type checkpoint: str
+    :param system_prompt: The system prompt used to initialize the model. If not provided, defaults to None.
+    :type system_prompt: str or None
     :param quantization: The quantization scheme used by the model. Can be one of "4bit", "8bit" or None (default is "4bit").
     :type quantization: str or None
-    :param history_reset_phrase: A phrase used to reset the conversation history. Defaults to "chat reset".
-    :type history_reset_phrase: str
-    :param init_timeout: The timeout in seconds for the initialization process. Defaults to 10 minutes (600 seconds).
+    :param init_timeout: The timeout in seconds for the initialization process. Defaults to None.
     :type init_timeout: int, optional
 
     Example usage:
@@ -207,18 +246,18 @@ class Idefics2(LLM):
 
 
 @define(kw_only=True)
-class Llava(LLM):
+class Llava(TransformersMLLM):
     """LLaVA is an open-source chatbot trained by fine-tuning LLM on multimodal instruction-following data. It is an auto-regressive language model, based on the transformer architecture. [Details](https://llava-vl.github.io/)
 
     :param name: An arbitrary name given to the model.
     :type name: str
     :param checkpoint: The name of the pre-trained model's checkpoint. Default is "liuhaotian/llava-v1.6-mistral-7b". For available checkpoints, consult [Llava checkpoints on HuggingFace](https://huggingface.co/liuhaotian).
     :type checkpoint: str
+    :param system_prompt: The system prompt used to initialize the model. If not provided, defaults to None.
+    :type system_prompt: str or None
     :param quantization: The quantization scheme used by the model. Can be one of "4bit", "8bit" or None (default is "4bit").
     :type quantization: str or None
-    :param history_reset_phrase: A phrase used to reset the conversation history. Defaults to "chat reset".
-    :type history_reset_phrase: str
-    :param init_timeout: The timeout in seconds for the initialization process. Defaults to 10 minutes (600 seconds).
+    :param init_timeout: The timeout in seconds for the initialization process. Defaults to None.
     :type init_timeout: int, optional
 
     Example usage:
@@ -231,18 +270,18 @@ class Llava(LLM):
 
 
 @define(kw_only=True)
-class InstructBlip(LLM):
+class InstructBlip(TransformersMLLM):
     """An open-source general purpose vision language model by SalesForce built using instruction-tuning. [Details](https://arxiv.org/abs/2305.06500)
 
     :param name: An arbitrary name given to the model.
     :type name: str
     :param checkpoint: The name of the pre-trained model's checkpoint. Default is "Salesforce/instructblip-vicuna-7b". For available checkpoints, consult [InstructBlip checkpoints on HuggingFace](https://huggingface.co/models?search=instructblip).
     :type checkpoint: str
-    :param quantization: The quantization scheme used by the model. Can be one of "4bit", "8bit" or None (default is "4bit").
-    :type quantization: str or None
     :param history_reset_phrase: A phrase used to reset the conversation history. Defaults to "chat reset".
     :type history_reset_phrase: str
-    :param init_timeout: The timeout in seconds for the initialization process. Defaults to 10 minutes (600 seconds).
+    :param quantization: The quantization scheme used by the model. Can be one of "4bit", "8bit" or None (default is "4bit").
+    :type quantization: str or None
+    :param init_timeout: The timeout in seconds for the initialization process. Defaults to None.
     :type init_timeout: int, optional
 
     Example usage:
@@ -264,7 +303,7 @@ class Whisper(Model):
     :type checkpoint: str
     :param quantization: The quantization scheme used by the model. Can be one of "4bit", "8bit" or None (default is "4bit").
     :type quantization: str or None
-    :param init_timeout: The timeout in seconds for the initialization process. Defaults to 10 minutes (600 seconds).
+    :param init_timeout: The timeout in seconds for the initialization process. Defaults to None.
     :type init_timeout: int, optional
 
     Example usage:
@@ -292,7 +331,7 @@ class SpeechT5(Model):
     :param checkpoint: The name of the pre-trained model's checkpoint. Default is "microsoft/speecht5_tts".
     :type checkpoint: str
     :param voice: The voice to use for synthesis. Can be one of "awb", "bdl", "clb", "jmk", "ksp", "rms", or "slt". Default is "clb".
-    :param init_timeout: The timeout in seconds for the initialization process. Defaults to 10 minutes (600 seconds).
+    :param init_timeout: The timeout in seconds for the initialization process. Defaults to None.
     :type init_timeout: int, optional
 
     Example usage:
@@ -330,7 +369,7 @@ class Bark(Model):
     :type checkpoint: str
     :param attn_implementation: The attention implementation to use for the model. Default is "flash_attention_2".
     :param voice: The voice to use for synthesis. More choices are available [here](https://suno-ai.notion.site/8b8e8749ed514b0cbf3f699013548683?v=bc67cff786b04b50b3ceb756fd05f68c). Default is "v2/en_speaker_6".
-    :param init_timeout: The timeout in seconds for the initialization process. Defaults to 10 minutes (600 seconds).
+    :param init_timeout: The timeout in seconds for the initialization process. Defaults to None.
     :type init_timeout: int, optional
 
     Example usage:
@@ -372,7 +411,7 @@ class VisionModel(Model):
     :type tracking_distance_threshold: int
     :param _num_trackers: The number of trackers to use. This number depends on the number of inputs image streams being given to the component. It is set automatically if **setup_trackers** is True.
     :type _num_trackers: int
-    :param init_timeout: The timeout in seconds for the initialization process. Defaults to 10 minutes (600 seconds).
+    :param init_timeout: The timeout in seconds for the initialization process. Defaults to None.
     :type init_timeout: int, optional
 
     Example usage:

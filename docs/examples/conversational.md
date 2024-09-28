@@ -123,7 +123,9 @@ The final step in this example is to launch the components. This is done by pass
 from agents.ros import Launcher
 
 # Launch the components
-launcher = Launcher(components=[speech_to_text, mllm, text_to_speech],
+launcher = Launcher()
+launcher.add_pkg(
+    components=[speech_to_text, mllm, text_to_speech],
                     activate_all_components_on_start=True)
 launcher.bringup()
 ```
@@ -180,7 +182,9 @@ text_to_speech = TextToSpeech(
     config=t2s_config
 )
 
-launcher = Launcher(components=[speech_to_text, mllm, text_to_speech],
+launcher = Launcher()
+launcher.add_pkg(
+    components=[speech_to_text, mllm, text_to_speech],
                     activate_all_components_on_start=True)
 launcher.bringup()
 ```

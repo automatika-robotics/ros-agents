@@ -2,6 +2,8 @@
 
 In the previous [example](semantic_map.md) we created a semantic map using the MapEncoding component. Intuitively one can imagine that using the map data would require some form of RAG. Let us suppose that we want to create a Go-to-X component, which, when given a command like 'Go to the yellow door', would retreive the coordinates of the _yellow door_ from the map and publish them to a goal point topic of type _PoseStamped_ to be handled by our robots navigation system. We will create our Go-to-X component using the LLM component provided by ROS Agents. We will start by initializing the component, and configuring it to use RAG.
 
+## Initialize the component
+
 ```python
 from agents.components import LLM
 from agents.models import Llama3_1
@@ -32,7 +34,7 @@ Note that the _collection_name_ parameter is the same as the map name we set in 
 
 ```
 {
-    "coordinates": [1, 2],
+    "coordinates": [1.1, 2.2, 0.0],
     "layer_name": "Topic_Name",  # same as topic name that the layer is subscribed to
     "timestamp": 1234567,
     "temporal_change": True
@@ -55,6 +57,8 @@ goto = LLM(
     component_name='go_to_x'
 )
 ```
+
+## Pre-process the model output before publishing
 
 Knowing that the output of retreival will be appended to the beggining of our query as context, we will setup a component level promot for our LLM.
 
@@ -81,13 +85,18 @@ import numpy as np
 def llm_answer_to_goal_point(output: str) -> Optional[np.ndarray]:
     # extract the json part of the output string (including brackets)
     # one can use sophisticated regex parsing here but we'll keep it simple
-    json_string = output[output.find("{"):output.find("}") + 1]
-
+    json_string = output[output.find("{") : output.rfind("}") + 1]
     # load the string as a json and extract position coordinates
     # if there is an error, return None, i.e. no output would be published to goal_point
     try:
         json_dict = json.loads(json_string)
-        return np.array(json_dict['position'])
+        coordinates = np.fromstring(json_dict["position"], sep=',', dtype=np.float64)
+        print('Coordinates Extracted:', coordinates)
+        if coordinates.shape[0] < 2 or coordinates.shape[0] > 3:
+            return
+        elif coordinates.shape[0] == 2:  # sometimes LLMs avoid adding the zeros of z-dimension
+            coordinates = np.append(coordinates, 0)
+        return coordinates
     except Exception:
         return
 
@@ -103,8 +112,10 @@ And we will launch our Go-to-X component.
 from agents.ros import Launcher
 
 # Launch the component
-launcher = Launcher(components=[goto],
-                    activate_all_components_on_start=True)
+launcher = Launcher()
+launcher.add_pkg(
+    components=[goto],
+    activate_all_components_on_start=True)
 launcher.bringup()
 ```
 
@@ -163,13 +174,18 @@ goto.set_component_prompt(
 def llm_answer_to_goal_point(output: str) -> Optional[np.ndarray]:
     # extract the json part of the output string (including brackets)
     # one can use sophisticated regex parsing here but we'll keep it simple
-    json_string = output[output.find("{"):output.find("}") + 1]
-
+    json_string = output[output.find("{") : output.rfind("}") + 1]
     # load the string as a json and extract position coordinates
     # if there is an error, return None, i.e. no output would be published to goal_point
     try:
         json_dict = json.loads(json_string)
-        return np.array(json_dict['position'])
+        coordinates = np.fromstring(json_dict["position"], sep=',', dtype=np.float64)
+        print('Coordinates Extracted:', coordinates)
+        if coordinates.shape[0] < 2 or coordinates.shape[0] > 3:
+            return
+        elif coordinates.shape[0] == 2:  # sometimes LLMs avoid adding the zeros of z-dimension
+            coordinates = np.append(coordinates, 0)
+        return coordinates
     except Exception:
         return
 
@@ -178,7 +194,9 @@ def llm_answer_to_goal_point(output: str) -> Optional[np.ndarray]:
 goto.add_publisher_preprocessor(goal_point, llm_answer_to_goal_point)
 
 # Launch the component
-launcher = Launcher(components=[goto],
-                    activate_all_components_on_start=True)
+launcher = Launcher()
+launcher.add_pkg(
+    components=[goto],
+    activate_all_components_on_start=True)
 launcher.bringup()
 ```

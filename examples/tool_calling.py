@@ -1,5 +1,3 @@
-from typing import Optional
-import json
 import numpy as np
 from agents.components import LLM
 from agents.models import Llama3_1
@@ -41,35 +39,40 @@ goto = LLM(
 
 # set a component prompt
 goto.set_component_prompt(
-    template="""From the given metadata, extract coordinates and provide
-    the coordinates in the following json format:\n {"position": coordinates}"""
+    template="""What are the position coordinates in the given metadata?"""
 )
 
 
 # pre-process the output before publishing to a topic of msg_type PoseStamped
-def llm_answer_to_goal_point(output: str) -> Optional[np.ndarray]:
-    # extract the json part of the output string (including brackets)
-    # one can use sophisticated regex parsing here but we'll keep it simple
-    json_string = output[output.find("{") : output.rfind("}") + 1]
-    # load the string as a json and extract position coordinates
-    # if there is an error, return None, i.e. no output would be published to goal_point
-    try:
-        json_dict = json.loads(json_string)
-        coordinates = np.fromstring(json_dict["position"], sep=",", dtype=np.float64)
-        print("Coordinates Extracted:", coordinates)
-        if coordinates.shape[0] < 2 or coordinates.shape[0] > 3:
-            return
-        elif (
-            coordinates.shape[0] == 2
-        ):  # sometimes LLMs avoid adding the zeros of z-dimension
-            coordinates = np.append(coordinates, 0)
-        return coordinates
-    except Exception:
-        return
+def get_coordinates(position: list[float]) -> np.ndarray:
+    """Get position coordinates"""
+    return np.array(position)
 
+
+function_description = {
+    "type": "function",
+    "function": {
+        "name": "get_coordinates",
+        "description": "Get position coordinates",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "position": {
+                    "type": "list[float]",
+                    "description": "The position coordinates in x, y and z",
+                }
+            },
+        },
+        "required": ["position"],
+    },
+}
 
 # add the pre-processing function to the goal_point output topic
-goto.add_publisher_preprocessor(goal_point, llm_answer_to_goal_point)
+goto.register_tool(
+    tool=get_coordinates,
+    tool_description=function_description,
+    send_tool_response_to_model=False,
+)
 
 # Launch the component
 launcher = Launcher()

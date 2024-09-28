@@ -20,12 +20,17 @@ class LLMConfig(BaseComponentConfig):
     :param distance_func: The distance metric used for nearest neighbor search for RAG.
         Supported values are "l2", "ip", and "cosine".
     :type distance_func: str
-    :param n_results: The maximum number of results to return for RAG.
+    :param n_results: The maximum number of results to return for RAG. Defaults to 1.
+        For numbers greater than 1, results will be concatenated together in a single string.
     :type n_results: int
     :param chat_history: Whether to include chat history in the LLM's prompt.
     :type chat_history: bool
+    :param history_reset_phrase: Phrase to reset chat history. Defaults to 'chat reset'
+    :type history_reset_phrase: str
+    :param history_size: Number of user messages to keep in chat history. Defaults to 10
+    :type history_size: int
     :param temperature: Temperature used for sampling tokens during generation.
-        Default is 0.7 and must be greater than 0.0.
+        Default is 0.8 and must be greater than 0.0.
     :type temperature: float
     :param max_new_tokens: The maximum number of new tokens to generate.
         Default is 100 and must be greater than 0.
@@ -44,7 +49,9 @@ class LLMConfig(BaseComponentConfig):
     n_results: int = field(default=1)
     add_metadata: bool = field(default=False)
     chat_history: bool = field(default=False)
-    temperature: float = field(default=0.7, validator=base_validators.gt(0.0))
+    history_reset_phrase: str = "chat reset"
+    history_size: int = 10  # number of user messages
+    temperature: float = field(default=0.8, validator=base_validators.gt(0.0))
     max_new_tokens: int = field(default=100, validator=base_validators.gt(0))
 
     def _get_inference_params(self) -> dict:
