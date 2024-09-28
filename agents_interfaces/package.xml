@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>agents_interfaces</name>
-  <version>0.1.1</version>
+  <version>0.2.0</version>
   <description>Custom Interfaces for ROS Agents</description>
   <maintainer email="contact@automatikarobotics.com">Automatika Robotics</maintainer>
   <license>MIT License Copyright (c) 2024 Automatika Robotics</license>
