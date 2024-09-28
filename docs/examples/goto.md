@@ -2,6 +2,8 @@
 
 In the previous [example](semantic_map.md) we created a semantic map using the MapEncoding component. Intuitively one can imagine that using the map data would require some form of RAG. Let us suppose that we want to create a Go-to-X component, which, when given a command like 'Go to the yellow door', would retreive the coordinates of the _yellow door_ from the map and publish them to a goal point topic of type _PoseStamped_ to be handled by our robots navigation system. We will create our Go-to-X component using the LLM component provided by ROS Agents. We will start by initializing the component, and configuring it to use RAG.
 
+## Initialize the component
+
 ```python
 from agents.components import LLM
 from agents.models import Llama3_1
@@ -32,7 +34,7 @@ Note that the _collection_name_ parameter is the same as the map name we set in 
 
 ```
 {
-    "coordinates": [1, 2],
+    "coordinates": [1.1, 2.2, 0.0],
     "layer_name": "Topic_Name",  # same as topic name that the layer is subscribed to
     "timestamp": 1234567,
     "temporal_change": True
@@ -55,6 +57,8 @@ goto = LLM(
     component_name='go_to_x'
 )
 ```
+
+## Pre-process the model output before publishing
 
 Knowing that the output of retreival will be appended to the beggining of our query as context, we will setup a component level promot for our LLM.
 
