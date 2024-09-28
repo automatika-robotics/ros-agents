@@ -36,4 +36,4 @@ preview = true
 ignore = ["E203", "E266", "E501", "F403", "F401"]
 select = ["B","C","E","F","W","B9"]
 [tool.ruff.lint.mccabe]
-max-complexity = 10
+max-complexity = 11

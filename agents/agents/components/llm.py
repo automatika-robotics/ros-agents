@@ -1,6 +1,7 @@
 from pathlib import Path
-from typing import Any, Optional, Union, List
+from typing import Any, Optional, Union, Callable
 
+from agents.clients.roboml import OllamaModel
 from jinja2.environment import Template
 
 from ..callbacks import TextCallback
@@ -80,10 +81,17 @@ class LLM(ModelComponent):
             else {"Required": [String], "Optional": [Detections]}
         )
         self.handled_outputs = [String]
+
+        self.model_client = model_client
+        self.db_client = db_client if db_client else None
+        self.messages: list[dict] = []
+
         self._component_template: Optional[Template] = None
 
-        self.db_client = db_client if db_client else None
-        self.chat_history = []
+        # tool calling
+        self.tools: dict[str, Callable] = {}
+        self.tool_descriptions: list[dict] = []
+        self.tool_response_flags: dict[str, bool] = {}
 
         super().__init__(
             inputs,
@@ -147,12 +155,15 @@ class LLM(ModelComponent):
         }
         self.db_client.add(db_input)
 
-    def _make_rag_query(self, query: str) -> Optional[str]:
-        """Retreive documents for RAG.
+    def _handle_rag_query(self, query: str) -> Optional[str]:
+        """Internal handler for retreiving documents for RAG.
         :param query:
         :type query: str
         :rtype: str | None
         """
+        if not self.config.enable_rag:
+            return None
+
         if not self.db_client:
             raise AttributeError(
                 "db_client needs to be set in component for RAG to work"
@@ -178,18 +189,61 @@ class LLM(ModelComponent):
             )
             return rag_docs
 
-    def _handle_chat_history(self, message: dict) -> List:
+    def _handle_chat_history(self, message: dict) -> None:
+        """Internal handler for chat history"""
         if self.config.chat_history:
-            self.chat_history.append(message)
+            self.messages.append(message)
 
             # if the size of history exceeds specified size than take out first
             # two messages
-            if len(self.chat_history) / 2 > self.config.history_size:
-                self.chat_history = self.chat_history[2:]
-
-            return self.chat_history
+            if len(self.messages) / 2 > self.config.history_size:
+                self.messages = self.messages[2:]
         else:
-            return [message]
+            self.messages = []
+            self.messages.append(message)
+
+    def _handle_tool_calls(self, result: dict) -> Optional[dict]:
+        """Internal handler for tool calling"""
+        if not result.get("tool_calls"):
+            self.get_logger().warning(
+                "Tools have been provided but no tool calls found in model response."
+            )
+            return result
+
+        response_flags = []
+
+        # make tool calls
+        for tool in result["tool_calls"]:
+            function_to_call = self.tools[tool["function"]["name"]]
+
+            try:
+                function_response = function_to_call(**tool["function"]["arguments"])
+            except Exception as e:
+                self.get_logger().error(f"Exception in function calling. {e}")
+                return result
+
+            # make last function call output the publishable output
+            result["output"] = function_response
+
+            # Add function response to the messages
+            self.messages.append({"role": "tool", "content": function_response})
+
+            # check for response flags
+            response_flags.append(self.tool_response_flags[tool["function"]["name"]])
+
+        # make call to model again if enabled
+        if any(response_flags):
+            self.get_logger().debug(f"Input from component: {self.messages}")
+
+            input = {
+                "query": self.messages,
+                **self.config._get_inference_params(),
+            }
+            return self.model_client.inference(input)
+
+        else:
+            # return result with its output set to last function response
+            return result
 
     def _create_input(self, *_, **kwargs) -> Optional[dict[str, Any]]:
         """Create inference input for LLM models
@@ -205,8 +259,11 @@ class LLM(ModelComponent):
             context[trigger.name] = query
 
             # handle chat reset
-            if self.chat_history and query.lower() == self.config.history_reset_phrase:
-                self.chat_history = []
+            if (
+                self.config.chat_history
+                and query.strip().lower() == self.config.history_reset_phrase
+            ):
+                self.messages = []
                 return None
 
         else:
@@ -227,7 +284,7 @@ class LLM(ModelComponent):
             return None
 
         # get RAG results if enabled in config and if docs retreived
-        rag_result = self._make_rag_query(query) if self.config.enable_rag else None
+        rag_result = self._handle_rag_query(query)
 
         # set system prompt template
         query = (
@@ -240,15 +297,20 @@ class LLM(ModelComponent):
         query = f"{rag_result}\n{query}" if rag_result else query
 
         message = {"role": "user", "content": query}
+        self._handle_chat_history(message)
 
-        messages = self._handle_chat_history(message)
+        self.get_logger().debug(f"Input from component: {self.messages}")
 
-        self.get_logger().debug(f"Input from component: {messages}")
-
-        return {
-            "query": messages,
+        input = {
+            "query": self.messages,
             **self.config._get_inference_params(),
         }
+
+        # Add any tools, if registered
+        if self.tool_descriptions:
+            input["tools"] = self.tool_descriptions
+
+        return input
 
     def _execution_step(self, *args, **kwargs):
         """_execution_step.
@@ -274,22 +336,29 @@ class LLM(ModelComponent):
             return
 
         # conduct inference
-        if self.model_client:
-            result = self.model_client.inference(inference_input)
+        result = self.model_client.inference(inference_input)
+
+        if result:
+            result_message = {"role": "assistant", "content": result["output"]}
+            self.messages.append(result_message)
+
+            # handle tool calls
+            if self.tools:
+                result = self._handle_tool_calls(result)
+
             # raise a fallback trigger via health status
             if not result:
                 self.health_status.set_failure()
-            else:
-                # store history
-                if self.config.chat_history:
-                    self.chat_history.append({
-                        "role": "assistant",
-                        "content": result["output"],
-                    })
-                # publish inference result
-                if result["output"] and hasattr(self, "publishers_dict"):
-                    for publisher in self.publishers_dict.values():
-                        publisher.publish(**result)
+                return
+
+            # publish inference result
+            if result["output"] and hasattr(self, "publishers_dict"):
+                for publisher in self.publishers_dict.values():
+                    publisher.publish(**result)
+
+        else:
+            # raise a fallback trigger via health status
+            self.health_status.set_failure()
 
     def set_topic_prompt(self, input_topic: Topic, template: Union[str, Path]) -> None:
         """Set prompt template on any input topic of type string.
@@ -337,3 +406,57 @@ class LLM(ModelComponent):
         ```
         """
         self._component_template = get_prompt_template(template)
+
+    def register_tool(
+        self,
+        tool: Callable,
+        tool_description: dict,
+        send_tool_response_to_model: bool = False,
+    ) -> None:
+        """Register a tool with the component which can be called by the model. If the send_tool_response_to_model flag is set to True than the output of the tool is sent back to the model and final output of the model is sent to component publishers (i.e. the model "uses" the tool to give a more accurate response.). If the flag is set to False than the output of the tool is sent to publishers of the component.
+
+        :param tool: An arbitrary function that needs to be called. The model response will describe a call to this function.
+        :type tool: Callable
+        :param tool_description: A dictionary describing the function. This dictionary needs to be made in the format shown [here](https://ollama.com/blog/tool-support). Also see usage example.
+        :type tool_description: dict
+        :param send_tool_response_to_model: Whether the model should be called with the tool response. If set to false the tool response will be sent to component publishers. If set to true, the response will be sent back to the model and the final response from the model will be sent to the publishers. Default is False.
+        :param send_tool_response_to_model: bool
+        :rtype: None
+
+        Example usage:
+        ```python
+        def my_arbitrary_function(first_param: str, second_param: int) -> str:
+            return f"{first_param}, {second_param}"
+
+        my_func_description = {
+                  'type': 'function',
+                  'function': {
+                    'name': 'my_arbitrary_function',
+                    'description': 'Description of my arbitrary function',
+                    'parameters': {
+                      'type': 'object',
+                      'properties': {
+                        'first_param': {
+                          'type': 'string',
+                          'description': 'Description of the first param',
+                        },
+                        'second_param': {
+                          'type': 'int',
+                          'description': 'Description of the second param',
+                        },
+                      },
+                      'required': ['first_param', 'second_param'],
+                    },
+                  },
+                }
+
+        my_component.register_tool(tool=my_arbitrary_function, tool_description=my_func_description, send_tool_response_to_model=False)
+        ```
+        """
+        if not isinstance(self.model_client, OllamaModel):
+            raise TypeError(
+                "Currently registering tools is only supported when using an Ollama client with the component."
+            )
+        self.tools[tool_description["name"]] = tool
+        self.tool_descriptions.append(tool_description)
+        self.tool_response_flags[tool_description["name"]] = send_tool_response_to_model

@@ -122,3 +122,4 @@ tmp/
 # Ignores for Docs
 docs/Makefile
 docs/make.bat
+docs/apidocs/

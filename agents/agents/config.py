@@ -30,7 +30,7 @@ class LLMConfig(BaseComponentConfig):
     :param history_size: Number of user messages to keep in chat history. Defaults to 10
     :type history_size: int
     :param temperature: Temperature used for sampling tokens during generation.
-        Default is 0.7 and must be greater than 0.0.
+        Default is 0.8 and must be greater than 0.0.
     :type temperature: float
     :param max_new_tokens: The maximum number of new tokens to generate.
         Default is 100 and must be greater than 0.
@@ -51,7 +51,7 @@ class LLMConfig(BaseComponentConfig):
     chat_history: bool = field(default=False)
     history_reset_phrase: str = "chat reset"
     history_size: int = 10  # number of user messages
-    temperature: float = field(default=0.7, validator=base_validators.gt(0.0))
+    temperature: float = field(default=0.8, validator=base_validators.gt(0.0))
     max_new_tokens: int = field(default=100, validator=base_validators.gt(0))
 
     def _get_inference_params(self) -> dict:

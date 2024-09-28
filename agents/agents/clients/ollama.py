@@ -2,7 +2,7 @@ from typing import Any, Optional
 
 import httpx
 
-from ..models import LLM, TransformersLLM, TransformersMLLM
+from ..models import LLM
 from ..utils import encode_arr_base64
 from .model_base import ModelClient
 
@@ -92,10 +92,17 @@ class OllamaClient(ModelClient):
             "messages": query,
         }
         inference_input.pop("query")
+
+        # make images parth of the latest message in message list
         if images := inference_input.get("images"):
-            # make images parth of the latest message in message list
             input["messages"][-1]["images"] = [encode_arr_base64(img) for img in images]
             inference_input.pop("images")
+
+        # Add tools as part of input, if available
+        if tools := inference_input.get("tools"):
+            input["tools"] = tools
+            inference_input.pop("tools")
+
         # ollama uses num_predict for max_new_tokens
         if inference_input.get("max_new_tokens"):
             inference_input["num_predict"] = inference_input["max_new_tokens"]
@@ -119,6 +126,11 @@ class OllamaClient(ModelClient):
 
         # make result part of the input
         input["output"] = ollama_result["message"]["content"]  # type: ignore
+
+        # if tool calls exist
+        if tool_calls := ollama_result["message"].get("tool_calls"):  # type: ignore
+            input["tool_calls"] = tool_calls
+
         return input
 
     def _deinitialize(self):
