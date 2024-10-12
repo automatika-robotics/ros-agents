@@ -69,13 +69,13 @@ class ModelComponent(Component):
 
     def _validate_output_topics(self) -> None:
         """
-        Verify that output topics that are not handled, have pre-processing functions provided
+        Verify that output topics that are not handled, have pre-processing functions provided. We just check that there is a pre-processing function and do not check whether the functions have output of the corresponding type.
         """
 
         if hasattr(self, "publishers_dict") and hasattr(self, "handled_outputs"):
             for name, pub in self.publishers_dict.items():
                 if pub.output_topic.msg_type not in self.handled_outputs and (
-                    not pub._pre_processors
+                    pub.output_topic.name not in self.__external_processors.keys()
                 ):
                     func_body = inspect.getsource(pub.output_topic.msg_type.convert)
                     raise TypeError(f"""{type(self).__name__} components can only handle output topics of type(s) {self.handled_outputs} automatically. {name} is of type {pub.output_topic.msg_type}. Please provide a pre-processing function for this topic and attach it to the topic by calling the `add_publisher_preprocessor` on the component {self.node_name}. Make sure the output of the pre-processor function can be passed as parameter output to the following function:

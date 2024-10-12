@@ -151,7 +151,6 @@ llm = LLM(
 
 # Define a Go-to-X component using LLM
 goto_query = Topic(name="goto_query", msg_type="String")
-goto_answer = Topic(name="goto_answer", msg_type="String")
 goal_point = Topic(name="goal_point", msg_type="PoseStamped")
 
 goto_config = LLMConfig(
@@ -164,7 +163,7 @@ goto_config = LLMConfig(
 
 goto = LLM(
     inputs=[goto_query],
-    outputs=[goto_answer, goal_point],
+    outputs=[goal_point],
     model_client=llama_client,
     config=goto_config,
     db_client=chroma_client,
