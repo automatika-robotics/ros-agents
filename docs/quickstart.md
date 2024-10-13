@@ -1,4 +1,4 @@
-# Quick Start  🚀
+# Quick Start 🚀
 
 Unlike other ROS package, ROS Agents provides a pure pythonic way of describing the node graph using [ROS Sugar](https://www.github.com/automatika-robotics/ros-sugar). Copy the following code in a python script and run it.
 
@@ -30,9 +30,9 @@ mllm.set_topic_prompt(text0, template="""You are an amazing and funny robot.
     Answer the following about this image: {{ text0 }}"""
 )
 # Launch the component
-launcher = Launcher(components=[mllm],
-                    enable_monitoring=False,
-                    activate_all_components_on_start=True)
+launcher = Launcher()
+launcher.add_pkg(components=[mllm],
+                 activate_all_components_on_start=True)
 launcher.bringup()
 ```
 
@@ -45,12 +45,12 @@ image0 = Topic(name="image_raw", msg_type="Image")
 text1 = Topic(name="text1", msg_type="String")
 ```
 
-```{important}
+````{important}
 If you are running ROS Agents on a robot, make sure you change the name of the topic to which the robot's camera is publishing the RGB images to in the following line.
 
 ```python
 image0 = Topic(name="NAME_OF_THE_TOPIC", msg_type="Image")
-```
+````
 
 ```{note}
 If you are running ROS Agents on a testing machine, and the machine has a webcam, you can install the [**ROS2 USB Cam**](https://github.com/klintan/ros2_usb_camera). Make sure you use the correct name of the image topic as above.
@@ -63,14 +63,17 @@ Then we will create a multimodal LLM component. Components are functional units 
 llava = Llava(name="llava")
 llava_client = OllamaClient(llava)
 ```
-```{important}
+
+````{important}
 If you are not running Ollama on the same machine (robot) on which you are running ROS Agents, you can define access to the machine running Ollama using host and port in this line:
 ```python
 llava_client = OllamaClient(llava, host="127.0.0.1", port=8000)
-```
+````
+
 ```{note}
 If the use of Ollama as a model serving platform is unclear, checkout [installation instructions](installation.md).
 ```
+
 Now we are ready to setup our component.
 
 ```python
@@ -92,11 +95,12 @@ Note how the MLLM type of component, also allows us to set a topic or component 
 
 ```python
 # Launch the component
-launcher = Launcher(components=[mllm],
-                    enable_monitoring=False,
-                    activate_all_components_on_start=True)
+launcher = Launcher()
+launcher.add_pkg(components=[mllm],
+                 activate_all_components_on_start=True)
 launcher.bringup()
 ```
+
 Now we can check that our component is running by using familiar ROS2 commands from a new terminal. We should see our component running as a ROS node and the its input and output topics in the topic list.
 
 ```shell

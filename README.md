@@ -4,7 +4,6 @@
   <img alt="ROS Agents Logo." src="docs/_static/ROS_AGENTS.png">
 </picture>
 
-
 ROS Agents is a fully-loaded framework for creating interactive embodied agents that can understand, remember, and act upon contextual information from their environment.
 
 - **Agents in the real world:** Designed to be used with autonomous robot systems that operate in dynamic environments, specifically AMRs.
@@ -44,16 +43,20 @@ The core of ROS Agents is agnostic to model serving platforms. It currently supp
 #### Get Dependencies
 
 Install python dependencies
+
 ```shell
 pip install -U pillow numpy opencv-python-headless hiredis msgpack msgpack_numpy 'attrs>=23.2.0'`
 ```
 
 Download ROS Sugar and Automatika ROS (common utils) packages.
+
 ```shell
 git clone https://github.com/automatika-robotics/ros-sugar
 git clone https://github.com/automatika-robotics/automatika-ros
 ```
+
 #### Install ROS Agents
+
 ```shell
 git clone https://github.com/automatika-robotics/ros-agents.git
 cd ..
@@ -62,7 +65,7 @@ source install/setup.bash
 python your_script.py
 ```
 
-## Quick Start  🚀
+## Quick Start 🚀
 
 Unlike other ROS package, ROS Agents provides a pure pythonic way of describing the node graph using [ROS Sugar](https://www.github.com/automatika-robotics/ros-sugar). Copy the following code in a python script and run it.
 
@@ -94,9 +97,9 @@ mllm.set_topic_prompt(text0, template="""You are an amazing and funny robot.
     Answer the following about this image: {{ text0 }}"""
 )
 # Launch the component
-launcher = Launcher(components=[mllm],
-                    enable_monitoring=False,
-                    activate_all_components_on_start=True)
+launcher = Launcher()
+launcher.add_pkg(components=[mllm],
+                 activate_all_components_on_start=True)
 launcher.bringup()
 ```
 
