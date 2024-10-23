@@ -72,7 +72,7 @@ class ModelClient(ABC):
             "host": self.host,
             "port": self.port,
             "init_on_activation": self.init_on_activation,
-            "logging_level": str(self.logger.get_effective_level()),
+            "logging_level": str(self.logger.get_effective_level()).split(".")[-1],
             "inference_timeout": self.inference_timeout,
         }
 
