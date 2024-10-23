@@ -2,7 +2,7 @@ from typing import Optional, Union, Dict, List
 
 from attrs import define, field, Factory
 from jinja2.environment import Template
-from .ros import base_validators, BaseComponentConfig, Topic, _get_topic, Route
+from .ros import base_validators, BaseComponentConfig, Topic, Route
 from .utils import validate_kwargs
 
 __all__ = [
@@ -83,7 +83,7 @@ class LLMConfig(ModelComponentConfig):
     _component_prompt: Optional[Template] = field(
         default=None, alias="_component_prompt"
     )
-    _topic_prompts: Dict[str, Template] = Factory(Dict)
+    _topic_prompts: Dict[str, Template] = Factory(dict)
 
     def _get_inference_params(self) -> Dict:
         """get_inference_params.
@@ -260,6 +260,14 @@ class SpeechToTextConfig(ModelComponentConfig):
         return {}
 
 
+def _get_optional_topic(topic: Union[Topic, Dict]) -> Optional[Topic]:
+    if not topic:
+        return
+    if isinstance(topic, Topic):
+        return topic
+    return Topic(**topic)
+
+
 @define(kw_only=True)
 class MapConfig(ComponentConfig):
     """Configuration for a MapEncoding component.
@@ -280,11 +288,17 @@ class MapConfig(ComponentConfig):
         default="l2", validator=base_validators.in_(["l2", "ip", "cosine"])
     )
     _db_client: Optional[Dict] = field(default=None)
-    _position: Optional[Union[Topic, Dict]] = field(default=None, converter=_get_topic)
-    _map_topic: Optional[Union[Topic, Dict]] = field(default=None, converter=_get_topic)
+    _position: Optional[Union[Topic, Dict]] = field(
+        default=None, converter=_get_optional_topic
+    )
+    _map_topic: Optional[Union[Topic, Dict]] = field(
+        default=None, converter=_get_optional_topic
+    )
 
 
-def _get_route(route: Union[Route, Dict]) -> Route:
+def _get_optional_route(route: Union[Route, Dict]) -> Optional[Route]:
+    if not route:
+        return
     if isinstance(route, Route):
         return route
     return Route(**route)
@@ -318,7 +332,7 @@ class SemanticRouterConfig(ComponentConfig):
     )
     _db_client: Optional[Dict] = field(default=None)
     _default_route: Optional[Union[Route, Dict]] = field(
-        default=None, converter=_get_route
+        default=None, converter=_get_optional_route
     )
 
 

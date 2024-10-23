@@ -82,9 +82,13 @@ class LLM(ModelComponent):
         self.handled_outputs = [String]
 
         self.model_client = model_client
+
         if db_client:
             self.db_client = db_client
             self.config._db_client = db_client._get_json()
+        else:
+            self.db_client = None
+
         self.messages: List[Dict] = []
 
         # tool calling

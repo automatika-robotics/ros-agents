@@ -6,7 +6,16 @@ from enum import Enum
 from io import BytesIO
 from pathlib import Path
 from types import GenericAlias, UnionType
-from typing import List, Dict, Optional, Union, _UnionGenericAlias, get_args, get_origin
+from typing import (
+    List,
+    Dict,
+    Optional,
+    Union,
+    _UnionGenericAlias,
+    get_args,
+    get_origin,
+    _GenericAlias,
+)
 
 import cv2
 import numpy as np
@@ -53,22 +62,23 @@ def get_prompt_template(template: Union[str, Path]) -> Template:
                 loader=FileSystemLoader(Path(template).parent), autoescape=True
             )
             return env.get_template(Path(template).name)
-        except TemplateSyntaxError:
-            get_logger("leibniz").error("Incorrectly specified jinja2 template")
-            raise
+        except TemplateSyntaxError as e:
+            raise TemplateSyntaxError(
+                f"Incorrectly specified jinja2 template: {e}"
+            ) from e
         except Exception as e:
-            get_logger("leibniz").error(
+            raise Exception(
                 f"Exception occured while reading template from file: {e}"
-            )
-            raise
+            ) from e
     else:
         # read from string
         try:
             env = Environment()
             return env.from_string(format(template))
-        except TemplateSyntaxError:
-            get_logger("leibniz").error("Incorrectly specified jinja2 template")
-            raise
+        except TemplateSyntaxError as e:
+            raise TemplateSyntaxError(
+                f"Incorrectly specified jinja2 template: {e}"
+            ) from e
 
 
 def validate_kwargs(_, attribute: Attribute, value: Dict):
@@ -114,7 +124,8 @@ def _check_type_from_signature(value, fn_param: inspect.Parameter) -> None:
 
     # Handles only the origin of GenericAlias (dict, list)
     _annotated_types = [
-        get_origin(t) if isinstance(t, GenericAlias) else t for t in _annotated_types
+        get_origin(t) if isinstance(t, (GenericAlias, _GenericAlias)) else t
+        for t in _annotated_types
     ]
 
     type_check = any(isinstance(value, t) for t in _annotated_types)

@@ -77,7 +77,7 @@ class Vision(ModelComponent):
             **kwargs,
         )
         # check for correct model and setup number of trackers to be initialized if any
-        if model_client.model_type == "VisionModel":
+        if model_client.model_type != "VisionModel":
             raise TypeError(
                 "A vision component can only be started with a Vision Model"
             )

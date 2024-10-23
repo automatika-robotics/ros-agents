@@ -24,7 +24,8 @@ __all__ = [
 # ollama models map to model:latest tag
 _ollama_mapping = [
     "llava",
-    "llama3" "llama3_1",
+    "llama3",
+    "llama3_1",
     "phi3",
     "qwen2",
     "aya",
