@@ -67,7 +67,7 @@ class LLM(ModelComponent):
         model_client: ModelClient,
         config: Optional[LLMConfig] = None,
         db_client: Optional[DBClient] = None,
-        trigger: Union[Topic, List[Topic], float] = 1,
+        trigger: Union[Topic, List[Topic], float] = 1.0,
         callback_group=None,
         component_name: str = "llm_component",
         **kwargs,
@@ -89,6 +89,11 @@ class LLM(ModelComponent):
         else:
             self.db_client = None
 
+        self.component_prompt = (
+            get_prompt_template(self.config._component_prompt)
+            if self.config._component_prompt
+            else None
+        )
         self.messages: List[Dict] = []
 
         # tool calling
@@ -108,12 +113,18 @@ class LLM(ModelComponent):
         )
 
     def activate(self):
+        # add component prompt if set after init
+        self.component_prompt = (
+            get_prompt_template(self.config._component_prompt)
+            if self.config._component_prompt
+            else None
+        )
         # add topic templates
         if self.config._topic_prompts:
-            for topic_name, prompt in self.config._topic_prompts.items():
+            for topic_name, template in self.config._topic_prompts.items():
                 callback = self.callbacks[topic_name]
                 if isinstance(callback, TextCallback):
-                    callback._template = prompt
+                    callback._template = get_prompt_template(template)
 
         # initialize db client
         if self.db_client:
@@ -298,9 +309,7 @@ class LLM(ModelComponent):
 
         # set system prompt template
         query = (
-            self.config._component_prompt.render(context)
-            if self.config._component_prompt
-            else query
+            self.component_prompt.render(context) if self.component_prompt else query
         )
 
         # attach rag results to templated query if available
@@ -396,7 +405,7 @@ class LLM(ModelComponent):
                 raise TypeError(
                     f"Prompt can only be set for a topic of type String, {callback.input_topic.name} is of type {callback.input_topic.msg_type}"
                 )
-            self.config._topic_prompts[input_topic.name] = get_prompt_template(template)
+            self.config._topic_prompts[input_topic.name] = template
 
     def set_component_prompt(self, template: Union[str, Path]) -> None:
         """Set component level prompt template which can use multiple input topics.
@@ -415,7 +424,7 @@ class LLM(ModelComponent):
         llm_component.set_component_prompt(template="You are an amazing and funny robot. You answer all questions with short and concise answers. You can see the following items: {{ detections }}. Please answer the following: {{ text0 }}")
         ```
         """
-        self.config._component_prompt = get_prompt_template(template)
+        self.config._component_prompt = template
 
     def register_tool(
         self,

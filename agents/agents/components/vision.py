@@ -57,7 +57,7 @@ class Vision(ModelComponent):
         outputs: List[Topic],
         model_client: ModelClient,
         config: Optional[VisionConfig] = None,
-        trigger: Union[Topic, List[Topic], float] = 1,
+        trigger: Union[Topic, List[Topic], float] = 1.0,
         callback_group=None,
         component_name: str = "vision_component",
         **kwargs,

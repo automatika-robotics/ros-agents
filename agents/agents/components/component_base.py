@@ -49,7 +49,8 @@ class Component(BaseComponent):
         )
 
         # setup component run type and triggers
-        self.trigger(trigger)
+        if not self.config._trigger:
+            self.trigger(trigger)
 
     def activate(self):
         """

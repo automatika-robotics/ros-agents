@@ -1,5 +1,6 @@
+import json
 import argparse
-from typing import List
+from typing import List, Dict
 
 import rclpy
 import setproctitle
@@ -82,8 +83,7 @@ def _parse_component_config(args: argparse.Namespace) -> all_configs.ComponentCo
             f"Unknown config_type '{config_type}'. Known types are {all_configs.__all__}"
         )
 
-    config = config_class()
-    config.from_json(args.config)
+    config = config_class(**json.loads(args.config))
 
     return config
 
@@ -107,6 +107,11 @@ def _parse_ros_args(args_names: List[str]) -> List[str]:
     else:
         ros_specific_args = []
     return ros_specific_args
+
+
+def _deserialize_topics(serialized_topics: str) -> List[Dict]:
+    list_of_str = json.loads(serialized_topics)
+    return [json.loads(t) for t in list_of_str]
 
 
 def main():
@@ -153,17 +158,30 @@ def main():
 
     # Get inputs/outputs
     inputs = (
-        [FixedInput(**i) if i.get("fixed") else Topic(**i) for i in args.inputs]
+        [
+            FixedInput(**i) if i.get("fixed") else Topic(**i)
+            for i in _deserialize_topics(args.inputs)
+        ]
         if args.inputs
         else None
     )
-    outputs = [Topic(**o) for o in args.outputs] if args.outputs else None
-    layers = [MapLayer(**i) for i in args.layers] if args.layers else None
-    routes = [Route(**r) for r in args.routes] if args.routes else None
+    outputs = (
+        [Topic(**o) for o in _deserialize_topics(args.outputs)]
+        if args.outputs
+        else None
+    )
+    layers = (
+        [MapLayer(**i) for i in _deserialize_topics(args.layers)]
+        if args.layers
+        else None
+    )
+    routes = (
+        [Route(**r) for r in _deserialize_topics(args.routes)] if args.routes else None
+    )
 
     # Init the component
     # Semantic Router Component
-    if comp_class == all_components.SemanticRouter.__name__:
+    if component_type == all_components.SemanticRouter.__name__:
         db_client = getattr(clients, config._db_client["client_type"])(
             **config._db_client
         )
@@ -176,7 +194,7 @@ def main():
             config_file=config_file,
         )
     # Map Encoding Component
-    elif comp_class == all_components.MapEncoding.__name__:
+    elif component_type == all_components.MapEncoding.__name__:
         db_client = getattr(clients, config._db_client["client_type"])(
             **config._db_client
         )
@@ -196,12 +214,12 @@ def main():
             getattr(clients, config._model_client["client_type"])(
                 **config._model_client
             )
-            if config._model_client
+            if hasattr(config, "_model_client") and config._model_client
             else None
         )
         db_client = (
             getattr(clients, config._db_client["client_type"])(**config._db_client)
-            if config._db_client
+            if hasattr(config, "_db_client") and config._db_client
             else None
         )
 

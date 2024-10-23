@@ -59,7 +59,7 @@ class MLLM(LLM):
         model_client: ModelClient,
         config: Optional[MLLMConfig] = None,
         db_client: Optional[DBClient] = None,
-        trigger: Union[Topic, List[Topic], float] = 1,
+        trigger: Union[Topic, List[Topic], float] = 1.0,
         callback_group=None,
         component_name: str = "mllm_component",
         **kwargs,
@@ -128,9 +128,7 @@ class MLLM(LLM):
 
         # set system prompt template
         query = (
-            self.config._component_prompt.render(context)
-            if self.config._component_prompt
-            else query
+            self.component_prompt.render(context) if self.component_prompt else query
         )
 
         # get RAG results if enabled in config and if docs retreived

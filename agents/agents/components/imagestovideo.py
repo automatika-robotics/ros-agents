@@ -56,11 +56,16 @@ class VideoMessageMaker(Component):
         inputs: List[Topic],
         outputs: List[Topic],
         config: Optional[VideoMessageMakerConfig] = None,
-        trigger: Union[Topic, List[Topic]],
+        trigger: Union[Topic, List[Topic], float] = 1.0,
         callback_group=None,
         component_name: str = "video_maker_component",
         **kwargs,
     ):
+        if isinstance(trigger, float):
+            raise TypeError(
+                "VideoMessageMaker component needs to be given a valid trigger topic. It cannot be started as a timed component."
+            )
+
         self.config: VideoMessageMakerConfig = config or VideoMessageMakerConfig()
         self.allowed_inputs = {"Required": [Image]}
         self.allowed_outputs = {"Required": [Video]}

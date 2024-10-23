@@ -1,9 +1,12 @@
+from types import NoneType
 from typing import Optional, Union, Dict, List
+from pathlib import Path
 
 from attrs import define, field, Factory
 from jinja2.environment import Template
+
 from .ros import base_validators, BaseComponentConfig, Topic, Route
-from .utils import validate_kwargs
+from .utils import validate_kwargs, get_prompt_template
 
 __all__ = [
     "LLMConfig",
@@ -21,7 +24,7 @@ __all__ = [
 class ComponentConfig(BaseComponentConfig):
     """ComponentConfig"""
 
-    _trigger: Optional[Union[str, List[str]]] = field(default=None)
+    _trigger: Optional[Union[str, List[str]]] = field(default=None, alias="_trigger")
 
 
 @define(kw_only=True)
@@ -79,11 +82,13 @@ class LLMConfig(ModelComponentConfig):
     history_size: int = 10  # number of user messages
     temperature: float = field(default=0.8, validator=base_validators.gt(0.0))
     max_new_tokens: int = field(default=100, validator=base_validators.gt(0))
-    _db_client: Optional[Dict] = field(default=None)
-    _component_prompt: Optional[Template] = field(
+    _db_client: Optional[Dict] = field(default=None, alias="_db_client")
+    _component_prompt: Optional[Union[str, Path]] = field(
         default=None, alias="_component_prompt"
     )
-    _topic_prompts: Dict[str, Template] = Factory(dict)
+    _topic_prompts: Dict[str, Union[str, Path]] = field(
+        default=Factory(dict), alias="_topic_prompts"
+    )
 
     def _get_inference_params(self) -> Dict:
         """get_inference_params.
@@ -287,12 +292,12 @@ class MapConfig(ComponentConfig):
     distance_func: str = field(
         default="l2", validator=base_validators.in_(["l2", "ip", "cosine"])
     )
-    _db_client: Optional[Dict] = field(default=None)
+    _db_client: Optional[Dict] = field(default=None, alias="_db_client")
     _position: Optional[Union[Topic, Dict]] = field(
-        default=None, converter=_get_optional_topic
+        default=None, converter=_get_optional_topic, alias="_position"
     )
     _map_topic: Optional[Union[Topic, Dict]] = field(
-        default=None, converter=_get_optional_topic
+        default=None, converter=_get_optional_topic, alias="_map_topic"
     )
 
 
@@ -330,9 +335,9 @@ class SemanticRouterConfig(ComponentConfig):
     maximum_distance: float = field(
         default=0.4, validator=base_validators.in_range(min_value=0.1, max_value=1.0)
     )
-    _db_client: Optional[Dict] = field(default=None)
+    _db_client: Optional[Dict] = field(default=None, alias="_db_client")
     _default_route: Optional[Union[Route, Dict]] = field(
-        default=None, converter=_get_optional_route
+        default=None, converter=_get_optional_route, alias="_default_route"
     )
 
 

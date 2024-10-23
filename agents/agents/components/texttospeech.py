@@ -63,7 +63,7 @@ class TextToSpeech(ModelComponent):
         outputs: Optional[List[Topic]] = None,
         model_client: ModelClient,
         config: Optional[TextToSpeechConfig] = None,
-        trigger: Union[Topic, List[Topic], float],
+        trigger: Union[Topic, List[Topic], float] = 1.0,
         callback_group=None,
         component_name: str = "texttospeech_component",
         **kwargs,
@@ -71,11 +71,6 @@ class TextToSpeech(ModelComponent):
         self.config: TextToSpeechConfig = config or TextToSpeechConfig()
         self.allowed_inputs = {"Required": [String]}
         self.handled_outputs = [Audio]
-
-        if isinstance(trigger, float):
-            raise TypeError(
-                "TextToSpeech component cannot be started as a timed component"
-            )
 
         super().__init__(
             inputs,
@@ -115,6 +110,9 @@ class TextToSpeech(ModelComponent):
         # set query as trigger
         trigger = kwargs.get("topic")
         if not trigger:
+            self.get_logger().error(
+                "Trigger topic not found. TextToSpeech component needs to be given a valid trigger topic."
+            )
             return None
         query = self.trig_callbacks[trigger.name].get_output()
         if not query:

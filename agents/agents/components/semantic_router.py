@@ -90,6 +90,7 @@ class SemanticRouter(Component):
         self.allowed_inputs = {"Required": [String]}
         self.allowed_outputs = {"Required": [String]}
         self.db_client = db_client
+        self.config._db_client = db_client._get_json()
 
         super().__init__(
             inputs,
