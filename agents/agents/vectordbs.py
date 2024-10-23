@@ -2,7 +2,7 @@
 The following vector DB specification classes are meant to define a comman interface for initialization of vector DBs. Currently the only supported vector DB is Chroma.
 """
 
-from typing import Optional
+from typing import Optional, Dict
 
 from attrs import define, field
 from .ros import BaseAttrs
@@ -24,14 +24,14 @@ class DB(BaseAttrs):
     host: str = field(default="127.0.0.1")
     port: Optional[int] = field(default=None)
 
-    def _get_init_params(self) -> dict:
+    def _get_init_params(self) -> Dict:
         params = {
             "username": self.username,
             "password": self.password,
             "db_location": self.db_location,
         }
         if self.encoder:
-            params["encoder"] = self.encoder.get_init_params()
+            params["encoder"] = self.encoder._get_init_params()
         return params
 
 

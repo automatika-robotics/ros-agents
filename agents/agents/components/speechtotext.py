@@ -1,4 +1,4 @@
-from typing import Any, Union, Optional
+from typing import Any, Union, Optional, List, Dict
 import queue
 import threading
 
@@ -57,11 +57,11 @@ class SpeechToText(ModelComponent):
     def __init__(
         self,
         *,
-        inputs: list[Topic],
-        outputs: list[Topic],
+        inputs: List[Topic],
+        outputs: List[Topic],
         model_client: ModelClient,
         config: Optional[SpeechToTextConfig] = None,
-        trigger: Union[Topic, list[Topic], float],
+        trigger: Union[Topic, List[Topic], float],
         callback_group=None,
         component_name: str = "speechtotext_component",
         **kwargs,
@@ -115,7 +115,7 @@ class SpeechToText(ModelComponent):
         # Deactivate component
         super().deactivate()
 
-    def _create_input(self, *_, **kwargs) -> Optional[dict[str, Any]]:
+    def _create_input(self, *_, **kwargs) -> Optional[Dict[str, Any]]:
         """Create inference input for SpeechToText models
         :param args:
         :param kwargs:

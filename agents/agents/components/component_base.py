@@ -1,7 +1,8 @@
 from abc import abstractmethod
 from copy import deepcopy
-from typing import Optional, Sequence, Union
+from typing import Optional, Sequence, Union, List, Dict
 
+from ..callbacks import GenericCallback
 from ..ros import (
     BaseComponent,
     ComponentRunType,
@@ -9,7 +10,7 @@ from ..ros import (
     SupportedType,
     Topic,
 )
-from ..config import BaseComponentConfig
+from ..config import ComponentConfig
 
 
 class Component(BaseComponent):
@@ -19,15 +20,15 @@ class Component(BaseComponent):
         self,
         inputs: Optional[Sequence[Union[Topic, FixedInput]]] = None,
         outputs: Optional[Sequence[Topic]] = None,
-        config: Optional[BaseComponentConfig] = None,
-        trigger: Union[Topic, list[Topic], float] = 1.0,
+        config: Optional[ComponentConfig] = None,
+        trigger: Union[Topic, List[Topic], float] = 1.0,
         callback_group=None,
-        component_name: str = "leibniz_component",
+        component_name: str = "agents_component",
         **kwargs,
     ):
-        self.config = deepcopy(config) if config else BaseComponentConfig()
-        self.allowed_inputs: dict[str, list[type[SupportedType]]]
-        self.allowed_outputs: dict[str, list[type[SupportedType]]]
+        self.config: ComponentConfig = deepcopy(config) if config else ComponentConfig()  # type: ignore
+        self.allowed_inputs: Dict[str, List[type[SupportedType]]]
+        self.allowed_outputs: Dict[str, List[type[SupportedType]]]
 
         # setup inputs and outputs
         if inputs:
@@ -60,42 +61,47 @@ class Component(BaseComponent):
 
         super().activate()
 
+    def __add_subscriber_to_callback(self, callback: GenericCallback) -> None:
+        # Creates subscriber and attaches it to input callback object
+        callback.set_node_name(self.node_name)
+        if hasattr(callback.input_topic, "fixed"):
+            self.get_logger().debug(
+                f"Fixed input specified for topic: {callback.input_topic} of type {callback.input_topic.msg_type}"
+            )
+        else:
+            callback.set_subscriber(self._add_ros_subscriber(callback))
+
     def create_all_subscribers(self):
         """
         Override to handle fixed inputs
         """
         self.get_logger().info("STARTING ALL SUBSCRIBERS")
-        if hasattr(self, "callbacks"):
-            # Create subscribers
-            for callback in self.callbacks.values():
-                # Creates subscriber and attaches it to input callback object
-                callback.set_node_name(self.node_name)
-                if hasattr(callback.input_topic, "fixed"):
-                    self.get_logger().debug(
-                        f"Fixed input specified for topic: {callback.input_topic} of type {callback.input_topic.msg_type}"
-                    )
-                else:
-                    callback.set_subscriber(self._add_ros_subscriber(callback))
+        # Create subscribers
+        for callback in self.callbacks.values():
+            self.__add_subscriber_to_callback(callback)
 
-    def create_component_triggers(self):
+    def _add_callback_to_trigger(self, trig_name: str) -> None:
+        callback = self.callbacks[trig_name]
+        self.trig_callbacks[trig_name] = callback
+        # remove trigger inputs from in_topics
+        del self.callbacks[trig_name]
+        self.__add_subscriber_to_callback(callback)
+        # Add execution step of the node as a post callback function
+        callback.on_callback_execute(self._execution_step)
+
+    def create_component_triggers(self) -> None:
         """
         Creates component triggers for events specified as triggers
         """
         self.get_logger().info("STARTING SUBSCRIBERS FOR TRIGGER TOPICS")
-        if hasattr(self, "trig_callbacks"):
-            for callback in self.trig_callbacks.values():
-                # Creates subscriber and attaches a callback object to the input
-                callback.set_node_name(self.node_name)
-                if hasattr(callback.input_topic, "fixed"):
-                    self.get_logger().debug(
-                        f"Fixed input specified for topic: {callback.input_topic} of type {callback.input_topic.msg_type}"
-                    )
-                else:
-                    callback.set_subscriber(self._add_ros_subscriber(callback))
-                # Add execution step of the node as a post callback function
-                callback.on_callback_execute(self._execution_step)
+        self.trig_callbacks = {}
+        if isinstance(self.config._trigger, list):
+            for t in self.config._trigger:
+                self._add_callback_to_trigger(t)
+        elif isinstance(self.config._trigger, str):
+            self._add_callback_to_trigger(self.config._trigger)
 
-    def destroy_all_subscribers(self):
+    def destroy_all_subscribers(self) -> None:
         """
         Destroys all node subscribers
         """
@@ -109,22 +115,20 @@ class Component(BaseComponent):
             if callback._subscriber:
                 self.destroy_subscription(callback._subscriber)
 
-    def trigger(self, trigger: Union[Topic, list[Topic], float]) -> None:
+    def trigger(self, trigger: Union[Topic, List[Topic], float]) -> None:
         """
         Set component trigger
         """
         if isinstance(trigger, list):
+            triggers = []
             for t in trigger:
                 if t.name not in self.callbacks:
                     raise TypeError(
                         f"Invalid configuration for component trigger {t.name} - A trigger needs to be one of the inputs already defined in component inputs."
                     )
-            self.run_type = ComponentRunType.EVENT
-            self.trig_callbacks = {}
-            for t in trigger:
-                self.trig_callbacks[t.name] = self.callbacks[t.name]
-                # remove trigger inputs from in_topics
-                del self.callbacks[t.name]
+                triggers.append(t.name)
+            self.config.run_type = ComponentRunType.EVENT
+            self.config._trigger = triggers
 
         elif isinstance(trigger, Topic):
             if trigger.name not in self.callbacks:
@@ -132,8 +136,7 @@ class Component(BaseComponent):
                     f"Invalid configuration for component trigger {trigger.name} - A trigger needs to be one of the inputs already defined in component inputs."
                 )
             self.run_type = ComponentRunType.EVENT
-            self.trig_callbacks = {trigger.name: self.callbacks[trigger.name]}
-            del self.callbacks[trigger.name]
+            self.config._trigger = trigger.name
 
         else:
             self.run_type = ComponentRunType.TIMED
@@ -143,7 +146,7 @@ class Component(BaseComponent):
     def validate_topics(
         self,
         topics: Sequence[Union[Topic, FixedInput]],
-        allowed_topics: Optional[dict[str, list[type[SupportedType]]]] = None,
+        allowed_topics: Optional[Dict[str, List[type[SupportedType]]]] = None,
         topics_direction: str = "Topics",
     ):
         """

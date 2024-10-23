@@ -1,6 +1,4 @@
-from typing import Any, Union, Optional
-
-from ..models import VisionModel
+from typing import Any, Union, Optional, List, Dict
 
 from ..clients.model_base import ModelClient
 from ..config import VisionConfig
@@ -55,11 +53,11 @@ class Vision(ModelComponent):
     def __init__(
         self,
         *,
-        inputs: list[Union[Topic, FixedInput]],
-        outputs: list[Topic],
+        inputs: List[Union[Topic, FixedInput]],
+        outputs: List[Topic],
         model_client: ModelClient,
         config: Optional[VisionConfig] = None,
-        trigger: Union[Topic, list[Topic], float] = 1,
+        trigger: Union[Topic, List[Topic], float] = 1,
         callback_group=None,
         component_name: str = "vision_component",
         **kwargs,
@@ -79,14 +77,14 @@ class Vision(ModelComponent):
             **kwargs,
         )
         # check for correct model and setup number of trackers to be initialized if any
-        if self.model_client and not isinstance(self.model_client.model, VisionModel):
+        if model_client.model_type == "VisionModel":
             raise TypeError(
                 "A vision component can only be started with a Vision Model"
             )
-        if self.model_client.model.setup_trackers:  # type: ignore
-            model_client.model._num_trackers = len(inputs)
+        if hasattr(model_client, "_model") and self.model_client._model.setup_trackers:  # type: ignore
+            model_client._model._num_trackers = len(inputs)
 
-    def _create_input(self, *_, **kwargs) -> Optional[dict[str, Any]]:
+    def _create_input(self, *_, **kwargs) -> Optional[Dict[str, Any]]:
         """Create inference input for ObjectDetection models
         :param args:
         :param kwargs:

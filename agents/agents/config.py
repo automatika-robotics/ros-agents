@@ -1,12 +1,38 @@
-from typing import Optional, Union
+from typing import Optional, Union, Dict, List
 
-from attrs import define, field
-from .ros import base_validators, BaseComponentConfig
+from attrs import define, field, Factory
+from jinja2.environment import Template
+from .ros import base_validators, BaseComponentConfig, Topic, _get_topic, Route
 from .utils import validate_kwargs
+
+__all__ = [
+    "LLMConfig",
+    "MLLMConfig",
+    "SpeechToTextConfig",
+    "TextToSpeechConfig",
+    "SemanticRouterConfig",
+    "MapConfig",
+    "VideoMessageMakerConfig",
+    "VisionConfig",
+]
 
 
 @define(kw_only=True)
-class LLMConfig(BaseComponentConfig):
+class ComponentConfig(BaseComponentConfig):
+    """ComponentConfig"""
+
+    _trigger: Optional[Union[str, List[str]]] = field(default=None)
+
+
+@define(kw_only=True)
+class ModelComponentConfig(ComponentConfig):
+    """ModelComponentConfig"""
+
+    _model_client: Optional[Dict] = field(default=None, alias="_model_client")
+
+
+@define(kw_only=True)
+class LLMConfig(ModelComponentConfig):
     """
     Configuration for the Large Language Model (LLM) component.
 
@@ -53,8 +79,13 @@ class LLMConfig(BaseComponentConfig):
     history_size: int = 10  # number of user messages
     temperature: float = field(default=0.8, validator=base_validators.gt(0.0))
     max_new_tokens: int = field(default=100, validator=base_validators.gt(0))
+    _db_client: Optional[Dict] = field(default=None)
+    _component_prompt: Optional[Template] = field(
+        default=None, alias="_component_prompt"
+    )
+    _topic_prompts: Dict[str, Template] = Factory(Dict)
 
-    def _get_inference_params(self) -> dict:
+    def _get_inference_params(self) -> Dict:
         """get_inference_params.
         :rtype: dict
         """
@@ -100,7 +131,7 @@ class MLLMConfig(LLMConfig):
 
 
 @define(kw_only=True)
-class VisionConfig(BaseComponentConfig):
+class VisionConfig(ModelComponentConfig):
     """Configuration for a detection component.
 
     The config allows you to customize the detection and/or tracking process.
@@ -122,9 +153,9 @@ class VisionConfig(BaseComponentConfig):
         default=0.5, validator=base_validators.in_range(min_value=0.1, max_value=1.0)
     )
     get_data_labels: bool = field(default=True)
-    labels_to_track: Optional[list[str]] = field(default=None)
+    labels_to_track: Optional[List[str]] = field(default=None)
 
-    def _get_inference_params(self) -> dict:
+    def _get_inference_params(self) -> Dict:
         """get_inference_params.
         :rtype: dict
         """
@@ -136,7 +167,7 @@ class VisionConfig(BaseComponentConfig):
 
 
 @define(kw_only=True)
-class TextToSpeechConfig(BaseComponentConfig):
+class TextToSpeechConfig(ModelComponentConfig):
     """Configuration for a Text-To-Speech component.
 
     This class defines the configuration options for a Text-To-Speech component.
@@ -164,7 +195,7 @@ class TextToSpeechConfig(BaseComponentConfig):
     block_size: int = field(default=1024)
     get_bytes: bool = field(default=False)
 
-    def _get_inference_params(self) -> dict:
+    def _get_inference_params(self) -> Dict:
         """get_inference_params.
         :rtype: dict
         """
@@ -172,7 +203,7 @@ class TextToSpeechConfig(BaseComponentConfig):
 
 
 @define(kw_only=True)
-class SpeechToTextConfig(BaseComponentConfig):
+class SpeechToTextConfig(ModelComponentConfig):
     """
     Configuration for a Speech-To-Text component.
 
@@ -222,7 +253,7 @@ class SpeechToTextConfig(BaseComponentConfig):
     def __attrs_post_init__(self):
         self.block_size = 512 if self.sample_rate == 16000 else 256
 
-    def _get_inference_params(self) -> dict:
+    def _get_inference_params(self) -> Dict:
         """get_inference_params.
         :rtype: dict
         """
@@ -230,7 +261,7 @@ class SpeechToTextConfig(BaseComponentConfig):
 
 
 @define(kw_only=True)
-class MapConfig(BaseComponentConfig):
+class MapConfig(ComponentConfig):
     """Configuration for a MapEncoding component.
 
     :param map_name: The name of the map.
@@ -248,10 +279,19 @@ class MapConfig(BaseComponentConfig):
     distance_func: str = field(
         default="l2", validator=base_validators.in_(["l2", "ip", "cosine"])
     )
+    _db_client: Optional[Dict] = field(default=None)
+    _position: Optional[Union[Topic, Dict]] = field(default=None, converter=_get_topic)
+    _map_topic: Optional[Union[Topic, Dict]] = field(default=None, converter=_get_topic)
+
+
+def _get_route(route: Union[Route, Dict]) -> Route:
+    if isinstance(route, Route):
+        return route
+    return Route(**route)
 
 
 @define(kw_only=True)
-class SemanticRouterConfig(BaseComponentConfig):
+class SemanticRouterConfig(ComponentConfig):
     """Configuration parameters for a semantic router component.
 
     :param router_name: The name of the router.
@@ -276,10 +316,14 @@ class SemanticRouterConfig(BaseComponentConfig):
     maximum_distance: float = field(
         default=0.4, validator=base_validators.in_range(min_value=0.1, max_value=1.0)
     )
+    _db_client: Optional[Dict] = field(default=None)
+    _default_route: Optional[Union[Route, Dict]] = field(
+        default=None, converter=_get_route
+    )
 
 
 @define(kw_only=True)
-class VideoMessageMakerConfig(BaseComponentConfig):
+class VideoMessageMakerConfig(ComponentConfig):
     """Configuration parameters for a video message maker component.
 
     :param min_video_frames: The minimum number of frames in a video segment. Default is 15, assuming a 0.5 second video at 30 fps.
@@ -309,7 +353,7 @@ class VideoMessageMakerConfig(BaseComponentConfig):
     threshold: float = field(
         default=0.3, validator=base_validators.in_range(min_value=0.1, max_value=5.0)
     )
-    flow_kwargs: dict = field(
+    flow_kwargs: Dict = field(
         default={
             "pyr_scale": 0.5,
             "levels": 3,

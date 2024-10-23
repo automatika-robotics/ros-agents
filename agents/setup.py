@@ -1,6 +1,11 @@
 from setuptools import find_packages, setup
 
 package_name = "agents"
+console_scripts = [
+    "executable = agents.executable:main",
+    "tiny_web_client = agents.chainlit_client.app:main",
+]
+
 
 setup(
     name=package_name,
@@ -17,7 +22,5 @@ setup(
     description="Build embodied agents with ROS and local ML models",
     license="MIT License Copyright (c) 2024 Automatika Robotics",
     tests_require=["pytest"],
-    entry_points={
-        "console_scripts": ["tiny_web_client = agents.chainlit_client.app:main"]
-    },
+    entry_points={"console_scripts": console_scripts},
 )

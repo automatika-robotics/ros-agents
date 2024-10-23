@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any, Optional, Dict, Union
 
 from rclpy import logging
 
@@ -13,11 +13,13 @@ class DBClient(ABC):
     @validate_func_args
     def __init__(
         self,
-        db: DB,
+        db: Union[DB, Dict],
         host: Optional[str] = None,
         port: Optional[int] = None,
+        response_timeout: int = 30,
         init_on_activation: bool = True,
         logging_level: str = "info",
+        **_,
     ):
         """__init__.
         :param db:
@@ -31,15 +33,47 @@ class DBClient(ABC):
         :param logging_level:
         :type logging_level: str
         """
-        self.db = db
+        if isinstance(db, DB):
+            self.db_type = db.__class__.__name__
+            self.db_name = db.name
+            self.init_timeout = db.init_timeout
+            self.db_init_params = db._get_init_params()
+
+        else:
+            self.db_type = db["db_type"]
+            self.db_name = db["db_name"]
+            self.init_timeout = db["init_timeout"]
+            self.db_init_params = db["db_init_params"]
+
         self.host = host
         self.port = port
         self.init_on_activation = init_on_activation
-        self.logger = logging.get_logger(self.db.name)
+        self.logger = logging.get_logger(self.db_name)
         logging.set_logger_level(
-            self.db.name, logging.get_logging_severity_from_string(logging_level)
+            self.db_name, logging.get_logging_severity_from_string(logging_level)
         )
-        self.init_timeout = self.db.init_timeout
+        self.response_timeout = response_timeout
+
+    def _get_json(self) -> Dict:
+        """Get client json
+        :rtype: Dict
+        """
+        db = {
+            "db_name": self.db_name,
+            "db_type": self.db_type,
+            "init_timeout": self.init_timeout,
+            "db_init_params": self.db_init_params,
+        }
+
+        return {
+            "client_type": self.__class__.__name__,
+            "db": db,
+            "host": self.host,
+            "port": self.port,
+            "init_on_activation": self.init_on_activation,
+            "logging_level": str(self.logger.get_effective_level()),
+            "response_timeout": self.response_timeout,
+        }
 
     def check_connection(self) -> None:
         """initialize.
@@ -54,7 +88,7 @@ class DBClient(ABC):
         if self.init_on_activation:
             self._initialize()
 
-    def add(self, db_input: dict[str, Any]) -> Optional[dict]:
+    def add(self, db_input: Dict[str, Any]) -> Optional[Dict]:
         """add data.
         :param db_input:
         :type db_input: dict[str, Any]
@@ -62,7 +96,7 @@ class DBClient(ABC):
         """
         return self._add(db_input)
 
-    def conditional_add(self, db_input: dict[str, Any]) -> Optional[dict]:
+    def conditional_add(self, db_input: Dict[str, Any]) -> Optional[Dict]:
         """add data if given ids dont exist. Update metadatas of the ids that exist
         :param db_input:
         :type db_input: dict[str, Any]
@@ -70,7 +104,7 @@ class DBClient(ABC):
         """
         return self._conditional_add(db_input)
 
-    def metadata_query(self, db_input: dict[str, Any]) -> Optional[dict]:
+    def metadata_query(self, db_input: Dict[str, Any]) -> Optional[Dict]:
         """Query based on given metadata.
         :param db_input:
         :type db_input: dict[str, Any]
@@ -78,7 +112,7 @@ class DBClient(ABC):
         """
         return self._metadata_query(db_input)
 
-    def query(self, db_input: dict[str, Any]) -> Optional[dict]:
+    def query(self, db_input: Dict[str, Any]) -> Optional[Dict]:
         """Query based on query string.
         :param db_input:
         :type db_input: dict[str, Any]
@@ -88,7 +122,7 @@ class DBClient(ABC):
 
     def deinitialize(self) -> None:
         """deinitialize."""
-        # TODO: Add check for db initialization by keeping model
+        # TODO: Add check for db initialization by keeping db
         # state in client
         if self.init_on_activation:
             self._deinitialize()
@@ -112,7 +146,7 @@ class DBClient(ABC):
         )
 
     @abstractmethod
-    def _add(self, db_input: dict[str, Any]) -> Optional[dict]:
+    def _add(self, db_input: Dict[str, Any]) -> Optional[Dict]:
         """add data.
         :param db_input:
         :type db_input: dict[str, Any]
@@ -123,7 +157,7 @@ class DBClient(ABC):
         )
 
     @abstractmethod
-    def _conditional_add(self, db_input: dict[str, Any]) -> Optional[dict]:
+    def _conditional_add(self, db_input: Dict[str, Any]) -> Optional[Dict]:
         """add data if given ids dont exist. Update metadatas of the ids that exist
         :param db_input:
         :type db_input: dict[str, Any]
@@ -134,7 +168,7 @@ class DBClient(ABC):
         )
 
     @abstractmethod
-    def _metadata_query(self, db_input: dict[str, Any]) -> Optional[dict]:
+    def _metadata_query(self, db_input: Dict[str, Any]) -> Optional[Dict]:
         """Query based on given metadata.
         :param db_input:
         :type db_input: dict[str, Any]
@@ -145,7 +179,7 @@ class DBClient(ABC):
         )
 
     @abstractmethod
-    def _query(self, db_input: dict[str, Any]) -> Optional[dict]:
+    def _query(self, db_input: Dict[str, Any]) -> Optional[Dict]:
         """Query based on query string.
         :param db_input:
         :type db_input: dict[str, Any]

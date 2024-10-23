@@ -1,5 +1,6 @@
-from typing import Any, Union, Optional
+from typing import Any, Union, Optional, List, Dict
 
+from ..clients.db_base import DBClient
 from ..clients.model_base import ModelClient
 from ..config import MLLMConfig
 from ..ros import FixedInput, Image, String, Topic, Detections
@@ -53,24 +54,26 @@ class MLLM(LLM):
     def __init__(
         self,
         *,
-        inputs: list[Union[Topic, FixedInput]],
-        outputs: list[Topic],
+        inputs: List[Union[Topic, FixedInput]],
+        outputs: List[Topic],
         model_client: ModelClient,
         config: Optional[MLLMConfig] = None,
-        trigger: Union[Topic, list[Topic], float] = 1,
+        db_client: Optional[DBClient] = None,
+        trigger: Union[Topic, List[Topic], float] = 1,
         callback_group=None,
         component_name: str = "mllm_component",
         **kwargs,
     ):
         self.allowed_inputs = {"Required": [String, Image], "Optional": [Detections]}
 
-        config = MLLMConfig() or config
+        config = config or MLLMConfig()
 
         super().__init__(
             inputs=inputs,
             outputs=outputs,
             model_client=model_client,
             config=config,
+            db_client=db_client,
             trigger=trigger,
             callback_group=callback_group,
             component_name=component_name,
@@ -78,7 +81,7 @@ class MLLM(LLM):
             **kwargs,
         )
 
-    def _create_input(self, *_, **kwargs) -> Optional[dict[str, Any]]:
+    def _create_input(self, *_, **kwargs) -> Optional[Dict[str, Any]]:
         """Create inference input for MLLM models
         :param args:
         :param kwargs:
@@ -125,8 +128,8 @@ class MLLM(LLM):
 
         # set system prompt template
         query = (
-            self._component_template.render(context)
-            if self._component_template
+            self.config._component_prompt.render(context)
+            if self.config._component_prompt
             else query
         )
 

@@ -6,7 +6,7 @@ from enum import Enum
 from io import BytesIO
 from pathlib import Path
 from types import GenericAlias, UnionType
-from typing import Optional, Union, _UnionGenericAlias, get_args, get_origin
+from typing import List, Dict, Optional, Union, _UnionGenericAlias, get_args, get_origin
 
 import cv2
 import numpy as np
@@ -18,7 +18,7 @@ from rclpy.logging import get_logger
 from .pluralize import pluralize
 
 
-def create_detection_context(obj_list: Optional[list]) -> str:
+def create_detection_context(obj_list: Optional[List]) -> str:
     """
     Creates a context prompt based on detections.
     :param      detections:  The detections
@@ -71,7 +71,7 @@ def get_prompt_template(template: Union[str, Path]) -> Template:
             raise
 
 
-def validate_kwargs(_, attribute: Attribute, value: dict):
+def validate_kwargs(_, attribute: Attribute, value: Dict):
     """Validate kwargs
     :param attribute:
     :type attribute: Attribute

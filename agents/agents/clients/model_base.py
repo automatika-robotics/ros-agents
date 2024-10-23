@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any, Optional, Dict, Union
 
 from rclpy import logging
 
@@ -13,12 +13,13 @@ class ModelClient(ABC):
     @validate_func_args
     def __init__(
         self,
-        model: Model,
+        model: Union[Model, Dict],
         host: Optional[str] = None,
         port: Optional[int] = None,
         inference_timeout: int = 30,
         init_on_activation: bool = True,
         logging_level: str = "info",
+        **_,
     ):
         """__init__.
         :param model:
@@ -32,16 +33,48 @@ class ModelClient(ABC):
         :param logging_level:
         :type logging_level: str
         """
-        self.model = model
+        if isinstance(model, Model):
+            self._model = model
+            self.model_type = model.__class__.__name__
+            self.model_name = model.name
+            self.init_timeout = model.init_timeout
+            self.model_init_params = model._get_init_params()
+
+        else:
+            self.model_type = model["model_type"]
+            self.model_name = model["model_name"]
+            self.init_timeout = model["init_timeout"]
+            self.model_init_params = model["model_init_params"]
+
         self.host = host
         self.port = port
         self.init_on_activation = init_on_activation
-        self.logger = logging.get_logger(self.model.name)
+        self.logger = logging.get_logger(self.model_name)
         logging.set_logger_level(
-            self.model.name, logging.get_logging_severity_from_string(logging_level)
+            self.model_name, logging.get_logging_severity_from_string(logging_level)
         )
-        self.init_timeout = self.model.init_timeout
         self.inference_timeout = inference_timeout
+
+    def _get_json(self) -> Dict:
+        """Get client json
+        :rtype: Dict
+        """
+        model = {
+            "model_name": self.model_name,
+            "model_type": self.model_type,
+            "init_timeout": self.init_timeout,
+            "model_init_params": self.model_init_params,
+        }
+
+        return {
+            "client_type": self.__class__.__name__,
+            "model": model,
+            "host": self.host,
+            "port": self.port,
+            "init_on_activation": self.init_on_activation,
+            "logging_level": str(self.logger.get_effective_level()),
+            "inference_timeout": self.inference_timeout,
+        }
 
     def check_connection(self) -> None:
         """initialize.
@@ -56,7 +89,7 @@ class ModelClient(ABC):
         if self.init_on_activation:
             self._initialize()
 
-    def inference(self, inference_input: dict[str, Any]) -> Optional[dict]:
+    def inference(self, inference_input: Dict[str, Any]) -> Optional[Dict]:
         """inference.
         :param inference_input:
         :type inference_input: dict[str, Any]
@@ -90,7 +123,7 @@ class ModelClient(ABC):
         )
 
     @abstractmethod
-    def _inference(self, inference_input: dict[str, Any]) -> Optional[dict]:
+    def _inference(self, inference_input: Dict[str, Any]) -> Optional[Dict]:
         """inference.
         :param inference_input:
         :type inference_input: dict[str, Any]

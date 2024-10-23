@@ -1,4 +1,5 @@
-from typing import Optional, Union
+from typing import Optional, Union, List, Dict
+import json
 
 import numpy as np
 
@@ -59,12 +60,12 @@ class MapEncoding(Component):
     def __init__(
         self,
         *,
-        layers: list[MapLayer],
+        layers: List[MapLayer],
         position: Topic,
         map_topic: Topic,
         config: MapConfig,
         db_client: DBClient,
-        trigger: Union[Topic, list[Topic], float] = 10.0,
+        trigger: Union[Topic, List[Topic], float] = 10.0,
         callback_group=None,
         component_name="map_encoder_component",
         **kwargs,
@@ -75,12 +76,16 @@ class MapEncoding(Component):
             "Optional": [Detections],
         }
         self.db_client = db_client
-        self.position = position
-        self.map_topic = map_topic
+        self.config._db_client = db_client._get_json()
+
+        self.position = self.config._position = position
+
+        self.map_topic = self.config._map_topic = map_topic
+
         super().__init__(
             None,
             None,
-            config,
+            self.config,
             trigger,
             callback_group,
             component_name,
@@ -94,8 +99,9 @@ class MapEncoding(Component):
         """activate."""
         self.get_logger().debug(f"Current Status: {self.health_status.value}")
         # initialize db client
-        self.db_client.check_connection()
-        self.db_client.initialize()
+        if self.db_client:
+            self.db_client.check_connection()
+            self.db_client.initialize()
 
         # activate the rest
         super().activate()
@@ -117,7 +123,7 @@ class MapEncoding(Component):
     def _fill_out_pre_defined(
         self,
         layer: MapLayer,
-        points: Union[list[tuple[np.ndarray, str]], tuple[np.ndarray, str]],
+        points: Union[List[tuple[np.ndarray, str]], tuple[np.ndarray, str]],
     ) -> None:
         """Fill out any pre-defined points in the MapLayer.
 
@@ -143,7 +149,7 @@ class MapEncoding(Component):
         }
 
         # create a list in case of one point
-        if not isinstance(points, list):
+        if not isinstance(points, List):
             points = [points]
 
         # add pre_defined points
@@ -158,9 +164,9 @@ class MapEncoding(Component):
             }
 
             id = (
-                f"{layer_name}:{data[0]}:0"
+                f"{layer_name}:{coordinates_string}:0"
                 if not layer.temporal_change
-                else f"{layer_name}:{data[0]}:{time_stamp}"
+                else f"{layer_name}:{coordinates_string}:{time_stamp}"
             )
             to_be_added["ids"].append(id)
             to_be_added["documents"].append(data[1])
@@ -170,7 +176,7 @@ class MapEncoding(Component):
 
     def _get_layer_data(
         self, time_stamp, map_coordinates
-    ) -> tuple[Optional[dict[str, list]], Optional[dict[str, list]]]:
+    ) -> tuple[Optional[Dict[str, List]], Optional[Dict[str, List]]]:
         """
         Gathers data from listeners and creates input for a map DB
         :param agg_obj: The aggregator object
@@ -213,13 +219,13 @@ class MapEncoding(Component):
                 # create ids and assign to appropriate dict based on temporal_change
                 if layer.temporal_change:
                     to_be_added["ids"].append(
-                        f"{name}:{relative_coordinates}:{time_stamp}"
+                        f"{name}:{coordinates_string}:{time_stamp}"
                     )
                     to_be_added["metadatas"].append(metadata)
                     to_be_added["documents"].append(item)
                 else:
                     # time value remains 0 if layer assumed to be temporaly static
-                    to_be_checked["ids"].append(f"{name}:{relative_coordinates}:0")
+                    to_be_checked["ids"].append(f"{name}:{coordinates_string}:0")
                     to_be_checked["metadatas"].append(metadata)
                     to_be_checked["documents"].append(item)
 
@@ -272,7 +278,7 @@ class MapEncoding(Component):
             self.db_client.conditional_add(to_be_checked)
 
     def _get_map_coordinates(
-        self, position: np.ndarray, map_meta_data: dict
+        self, position: np.ndarray, map_meta_data: Dict
     ) -> np.ndarray | None:
         """
         Get coordinates from position and map meta data
@@ -288,7 +294,7 @@ class MapEncoding(Component):
         else:
             return None
 
-    def _layers(self, layers: list[MapLayer]):
+    def _layers(self, layers: List[MapLayer]):
         """
         Set component layers.
 
@@ -297,11 +303,33 @@ class MapEncoding(Component):
         """
         self.layers_dict = {layer.subscribes_to.name: layer for layer in layers}
         layer_topics = [layer.subscribes_to for layer in layers]
-        all_inputs = [*layer_topics, self.position, self.map_topic]
+        all_inputs = [*layer_topics, self.config._position, self.config._map_topic]
         self.validate_topics(all_inputs, self.allowed_inputs, "Inputs")
         self.callbacks = {
             input.name: input.msg_type.callback(input) for input in all_inputs
         }
+
+    def _update_cmd_args_list(self):
+        """
+        Update launch command arguments
+        """
+        super()._update_cmd_args_list()
+
+        self.launch_cmd_args = [
+            "--layers",
+            self._get_layers_json(),
+        ]
+
+    def _get_layers_json(self) -> Union[str, bytes, bytearray]:
+        """
+        Serialize component layers to json
+
+        :return: Serialized inputs
+        :rtype:  str | bytes | bytearray
+        """
+        if not hasattr(self, "layers_dict"):
+            return "[]"
+        return json.dumps([layer.to_json() for layer in self.layers_dict.values()])
 
     @component_action
     def add_point(self, layer: MapLayer, point: tuple[np.ndarray, str]) -> None:

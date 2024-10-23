@@ -1,10 +1,11 @@
 import base64
 import time
 from enum import Enum
-from typing import Any, Optional
+from typing import Any, Optional, Dict
 
 import httpx
 
+from .. import models
 from ..models import Model, OllamaModel, TransformersLLM, TransformersMLLM
 from ..utils import encode_arr_base64
 from ..vectordbs import DB
@@ -40,6 +41,7 @@ class HTTPModelClient(ModelClient):
         inference_timeout: int = 30,
         init_on_activation: bool = True,
         logging_level: str = "info",
+        **kwargs,
     ):
         if isinstance(model, OllamaModel):
             raise TypeError(
@@ -52,8 +54,8 @@ class HTTPModelClient(ModelClient):
             inference_timeout=inference_timeout,
             init_on_activation=init_on_activation,
             logging_level=logging_level,
+            **kwargs,
         )
-        self.model_type = self.model.__class__
         self.url = f"http://{self.host}:{self.port}"
         self._check_connection()
 
@@ -74,34 +76,30 @@ class HTTPModelClient(ModelClient):
         """
         # Create a model node on RoboML
         self.logger.info("Creating model node on remote")
-        if issubclass(self.model_type, TransformersLLM):
+        model_class = getattr(models, self.model_type)
+        if issubclass(model_class, TransformersLLM):
             model_type = TransformersLLM.__name__
-        elif issubclass(self.model_type, TransformersMLLM):
+        elif issubclass(model_class, TransformersMLLM):
             model_type = TransformersMLLM.__name__
         else:
-            model_type = self.model_type.__name__
-        start_params = {"node_name": self.model.name, "node_type": model_type}
+            model_type = self.model_type
+        start_params = {"node_name": self.model_name, "node_type": model_type}
         try:
             httpx.post(
                 f"{self.url}/add_node", params=start_params, timeout=self.init_timeout
             ).raise_for_status()
-            self.logger.info(f"Initializing {self.model.name} on RoboML remote")
+            self.logger.info(f"Initializing {self.model_name} on RoboML remote")
             # get initialization params and initiale model
-            model_dict = self.model._get_init_params()
-            if hasattr(self.model, "system_prompt") and (
-                sys_prompt := self.model.system_prompt  # type: ignore
-            ):
-                model_dict["system_prompt"] = sys_prompt
             httpx.post(
-                f"{self.url}/{self.model.name}/initialize",
-                params=model_dict,
+                f"{self.url}/{self.model_name}/initialize",
+                params=self.model_init_params,
                 timeout=self.init_timeout,
             ).raise_for_status()
         except Exception as e:
             return self.__handle_exceptions(e)
-        self.logger.info(f"{self.model.name} initialized on remote")
+        self.logger.info(f"{self.model_name} initialized on remote")
 
-    def _inference(self, inference_input: dict[str, Any]) -> Optional[dict]:
+    def _inference(self, inference_input: Dict[str, Any]) -> Optional[Dict]:
         """Call inference on the model using data and inference parameters from the component"""
         try:
             # encode any byte or numpy array data
@@ -115,7 +113,7 @@ class HTTPModelClient(ModelClient):
                 inference_input["images"] = [encode_arr_base64(img) for img in images]
             # call inference method
             r = httpx.post(
-                f"{self.url}/{self.model.name}/inference",
+                f"{self.url}/{self.model_name}/inference",
                 json=inference_input,
                 timeout=self.inference_timeout,
             ).raise_for_status()
@@ -136,8 +134,8 @@ class HTTPModelClient(ModelClient):
     def _deinitialize(self) -> None:
         """Deinitialize the model on the platform"""
 
-        self.logger.error(f"Deinitializing {self.model.name} model on RoboML remote")
-        stop_params = {"node_name": self.model.name}
+        self.logger.error(f"Deinitializing {self.model_name} model on RoboML remote")
+        stop_params = {"node_name": self.model_name}
         try:
             httpx.post(f"{self.url}/remove_node", params=stop_params).raise_for_status()
         except Exception as e:
@@ -179,17 +177,18 @@ class HTTPDBClient(DBClient):
         response_timeout: int = 30,
         init_on_activation: bool = True,
         logging_level: str = "info",
+        **kwargs,
     ):
         super().__init__(
             db=db,
             host=host,
             port=port,
+            response_timeout=response_timeout,
             init_on_activation=init_on_activation,
             logging_level=logging_level,
+            **kwargs,
         )
-        self.db_type = self.db.__class__
         self.url = f"http://{self.host}:{self.port}"
-        self.response_timeout = response_timeout
         self._check_connection()
 
     def _check_connection(self):
@@ -209,24 +208,23 @@ class HTTPDBClient(DBClient):
         """
         # Create a DB node on RoboML
         self.logger.info("Creating db node on remote")
-        start_params = {"node_name": self.db.name, "node_type": self.db_type.__name__}
+        start_params = {"node_name": self.db_name, "node_type": self.db_type}
         try:
             httpx.post(
                 f"{self.url}/add_node", params=start_params, timeout=self.init_timeout
             ).raise_for_status()
-            self.logger.info(f"Initializing {self.db.name} on RoboML remote")
+            self.logger.info(f"Initializing {self.db_name} on RoboML remote")
             # get initialization params and initiale db
-            db_dict = self.db._get_init_params()
             httpx.post(
-                f"{self.url}/{self.db.name}/initialize",
-                params=db_dict,
+                f"{self.url}/{self.db_name}/initialize",
+                params=self.db_init_params,
                 timeout=self.init_timeout,
             ).raise_for_status()
         except Exception as e:
             return self.__handle_exceptions(e)
-        self.logger.info(f"{self.db.name} initialized on remote")
+        self.logger.info(f"{self.db_name} initialized on remote")
 
-    def _add(self, db_input: dict[str, Any]) -> Optional[dict]:
+    def _add(self, db_input: Dict[str, Any]) -> Optional[Dict]:
         """Add data.
         :param db_input:
         :type db_input: dict[str, Any]
@@ -235,7 +233,7 @@ class HTTPDBClient(DBClient):
         try:
             # add to DB
             r = httpx.post(
-                f"{self.url}/{self.db.name}/add",
+                f"{self.url}/{self.db_name}/add",
                 json=db_input,
                 timeout=self.response_timeout,
             ).raise_for_status()
@@ -247,7 +245,7 @@ class HTTPDBClient(DBClient):
 
         return result
 
-    def _conditional_add(self, db_input: dict[str, Any]) -> Optional[dict]:
+    def _conditional_add(self, db_input: Dict[str, Any]) -> Optional[Dict]:
         """Add data only if the ids dont exist. Otherwise update metadatas
         :param db_input:
         :type db_input: dict[str, Any]
@@ -256,7 +254,7 @@ class HTTPDBClient(DBClient):
         try:
             # add to DB
             r = httpx.post(
-                f"{self.url}/{self.db.name}/conditional_add",
+                f"{self.url}/{self.db_name}/conditional_add",
                 json=db_input,
                 timeout=self.response_timeout,
             ).raise_for_status()
@@ -268,7 +266,7 @@ class HTTPDBClient(DBClient):
 
         return result
 
-    def _metadata_query(self, db_input: dict[str, Any]) -> Optional[dict]:
+    def _metadata_query(self, db_input: Dict[str, Any]) -> Optional[Dict]:
         """Query based on given metadata.
         :param db_input:
         :type db_input: dict[str, Any]
@@ -277,7 +275,7 @@ class HTTPDBClient(DBClient):
         try:
             # query db
             r = httpx.post(
-                f"{self.url}/{self.db.name}/metadata_query",
+                f"{self.url}/{self.db_name}/metadata_query",
                 json=db_input,
                 timeout=self.response_timeout,
             ).raise_for_status()
@@ -289,7 +287,7 @@ class HTTPDBClient(DBClient):
 
         return result
 
-    def _query(self, db_input: dict[str, Any]) -> Optional[dict]:
+    def _query(self, db_input: Dict[str, Any]) -> Optional[Dict]:
         """Query using a query string.
         :param db_input:
         :type db_input: dict[str, Any]
@@ -298,7 +296,7 @@ class HTTPDBClient(DBClient):
         try:
             # query db
             r = httpx.post(
-                f"{self.url}/{self.db.name}/query",
+                f"{self.url}/{self.db_name}/query",
                 json=db_input,
                 timeout=self.response_timeout,
             ).raise_for_status()
@@ -313,8 +311,8 @@ class HTTPDBClient(DBClient):
     def _deinitialize(self) -> None:
         """Deinitialize DB on the platform"""
 
-        self.logger.error(f"Deinitializing {self.db.name} on RoboML remote")
-        stop_params = {"node_name": self.db.name}
+        self.logger.error(f"Deinitializing {self.db_name} on RoboML remote")
+        stop_params = {"node_name": self.db_name}
         try:
             httpx.post(f"{self.url}/remove_node", params=stop_params).raise_for_status()
         except Exception as e:
@@ -356,6 +354,7 @@ class RESPModelClient(ModelClient):
         inference_timeout: int = 30,
         init_on_activation: bool = True,
         logging_level: str = "info",
+        **kwargs,
     ):
         if isinstance(model, OllamaModel):
             raise TypeError(
@@ -368,8 +367,8 @@ class RESPModelClient(ModelClient):
             inference_timeout=inference_timeout,
             init_on_activation=init_on_activation,
             logging_level=logging_level,
+            **kwargs,
         )
-        self.model_type = self.model.__class__
         try:
             import msgpack
             import msgpack_numpy as m_pack
@@ -405,55 +404,58 @@ class RESPModelClient(ModelClient):
         """
         # Create a model node on RoboML
         self.logger.info("Creating model node on remote")
-        if issubclass(self.model_type, TransformersLLM):
+        self.model_class = getattr(models, self.model_type)
+        if issubclass(self.model_class, TransformersLLM):
             model_type = TransformersLLM.__name__
-        elif issubclass(self.model_type, TransformersMLLM):
+        elif issubclass(self.model_class, TransformersMLLM):
             model_type = TransformersMLLM.__name__
         else:
-            model_type = self.model_type.__name__
-        start_params = {"node_name": self.model.name, "node_type": model_type}
+            model_type = self.model_type
+        start_params = {"node_name": self.model_name, "node_type": model_type}
         try:
             start_params_b = self.packer(start_params)
             self.redis.execute_command("add_node", start_params_b)
 
-            self.logger.info(f"Initializing {self.model.name} on RoboML remote")
+            self.logger.info(f"Initializing {self.model_name} on RoboML remote")
             # make initialization params
-            model_dict = self.model._get_init_params()
+            model_dict = self.model_init_params
 
             # initialize model
             init_b = self.packer(model_dict)
-            self.redis.execute_command(f"{self.model.name}.initialize", init_b)
+            self.redis.execute_command(f"{self.model_name}.initialize", init_b)
         except Exception as e:
             return self.__handle_exceptions(e)
 
         # check status for init completion after every second
         status = self.__check_model_status()
         counter = 0
-        while status != Status.READY and counter < self.init_timeout:
+        while status != Status.READY:
+            if self.init_timeout and counter > self.init_timeout:
+                break
             time.sleep(1)
             counter += 1
             status = self.__check_model_status()
 
         if status == Status.READY:
-            self.logger.info(f"{self.model.name} model initialized on remote")
+            self.logger.info(f"{self.model_name} model initialized on remote")
         elif status == Status.INITIALIZING:
-            self.logger.error(f"{self.model.name} model initialization timed out.")
+            self.logger.error(f"{self.model_name} model initialization timed out.")
         elif status == Status.INITIALIZATION_ERROR:
             self.logger.error(
-                f"{self.model.name} model initialization failed. Check remote for logs."
+                f"{self.model_name} model initialization failed. Check remote for logs."
             )
         else:
             self.logger.error(
-                f"Unexpected Error while initializing {self.model.name}: Check remote for logs."
+                f"Unexpected Error while initializing {self.model_name}: Check remote for logs."
             )
 
-    def _inference(self, inference_input: dict[str, Any]) -> Optional[dict]:
+    def _inference(self, inference_input: Dict[str, Any]) -> Optional[Dict]:
         """Call inference on the model using data and inference parameters from the component"""
         try:
             data_b = self.packer(inference_input)
             # call inference method
             result_b = self.redis.execute_command(
-                f"{self.model.name}.inference", data_b
+                f"{self.model_name}.inference", data_b
             )
             result = self.unpacker(result_b)
         except Exception as e:
@@ -468,8 +470,8 @@ class RESPModelClient(ModelClient):
     def _deinitialize(self) -> None:
         """Deinitialize the model on the platform"""
 
-        self.logger.error(f"Deinitializing {self.model.name} on RoboML remote")
-        stop_params = {"node_name": self.model.name}
+        self.logger.error(f"Deinitializing {self.model_name} on RoboML remote")
+        stop_params = {"node_name": self.model_name}
         try:
             stop_params_b = self.packer(stop_params)
             self.redis.execute_command("remove_node", stop_params_b)
@@ -481,7 +483,7 @@ class RESPModelClient(ModelClient):
         :rtype: str | None
         """
         try:
-            status_b = self.redis.execute_command(f"{self.model.name}.get_status")
+            status_b = self.redis.execute_command(f"{self.model_name}.get_status")
             status = self.unpacker(status_b)
         except Exception as e:
             return self.__handle_exceptions(e)
@@ -522,6 +524,7 @@ class RESPDBClient(DBClient):
         port: int = 6379,
         init_on_activation: bool = True,
         logging_level: str = "info",
+        **kwargs,
     ):
         super().__init__(
             db=db,
@@ -529,8 +532,8 @@ class RESPDBClient(DBClient):
             port=port,
             init_on_activation=init_on_activation,
             logging_level=logging_level,
+            **kwargs,
         )
-        self.db_type = self.db.__class__
         try:
             import msgpack
             import msgpack_numpy as m_pack
@@ -566,7 +569,7 @@ class RESPDBClient(DBClient):
         """
         # Creating DB node on remote
         self.logger.info("Creating db node on remote")
-        start_params = {"node_name": self.db.name, "node_type": self.db_type.__name__}
+        start_params = {"node_name": self.db_name, "node_type": self.db_type}
 
         try:
             start_params_b = self.packer(start_params)
@@ -574,12 +577,11 @@ class RESPDBClient(DBClient):
         except Exception as e:
             self.__handle_exceptions(e)
 
-        self.logger.info(f"Initializing {self.db.name} on remote")
+        self.logger.info(f"Initializing {self.db_name} on remote")
         try:
-            db_dict = self.db._get_init_params()
-            init_b = self.packer(db_dict)
+            init_b = self.packer(self.db_init_params)
             # initialize database
-            self.redis.execute_command(f"{self.db.name}.initialize", init_b)
+            self.redis.execute_command(f"{self.db_name}.initialize", init_b)
         except Exception as e:
             return self.__handle_exceptions(e)
 
@@ -592,19 +594,19 @@ class RESPDBClient(DBClient):
             status = self.__check_db_status()
 
         if status == Status.READY:
-            self.logger.info(f"{self.db.name} db initialized on remote")
+            self.logger.info(f"{self.db_name} db initialized on remote")
         elif status == Status.INITIALIZING:
-            self.logger.error(f"{self.db.name} db initialization timed out.")
+            self.logger.error(f"{self.db_name} db initialization timed out.")
         elif status == Status.INITIALIZATION_ERROR:
             self.logger.error(
-                f"{self.db.name} db initialization failed. Check remote for logs."
+                f"{self.db_name} db initialization failed. Check remote for logs."
             )
         else:
             self.logger.error(
-                f"Unexpected Error while initializing {self.db.name}: Check remote for logs."
+                f"Unexpected Error while initializing {self.db_name}: Check remote for logs."
             )
 
-    def _add(self, db_input: dict[str, Any]) -> Optional[dict]:
+    def _add(self, db_input: Dict[str, Any]) -> Optional[Dict]:
         """Add data.
         :param db_input:
         :type db_input: dict[str, Any]
@@ -613,7 +615,7 @@ class RESPDBClient(DBClient):
         try:
             data_b = self.packer(db_input)
             # add to DB
-            result_b = self.redis.execute_command(f"{self.db.name}.add", data_b)
+            result_b = self.redis.execute_command(f"{self.db_name}.add", data_b)
             result = self.unpacker(result_b)
         except Exception as e:
             return self.__handle_exceptions(e)
@@ -622,7 +624,7 @@ class RESPDBClient(DBClient):
 
         return result
 
-    def _conditional_add(self, db_input: dict[str, Any]) -> Optional[dict]:
+    def _conditional_add(self, db_input: Dict[str, Any]) -> Optional[Dict]:
         """Add data only if the ids dont exist. Otherwise update metadatas
         :param db_input:
         :type db_input: dict[str, Any]
@@ -632,7 +634,7 @@ class RESPDBClient(DBClient):
             data_b = self.packer(db_input)
             # add to DB
             result_b = self.redis.execute_command(
-                f"{self.db.name}.conditional_add", data_b
+                f"{self.db_name}.conditional_add", data_b
             )
             result = self.unpacker(result_b)
         except Exception as e:
@@ -642,7 +644,7 @@ class RESPDBClient(DBClient):
 
         return result
 
-    def _metadata_query(self, db_input: dict[str, Any]) -> Optional[dict]:
+    def _metadata_query(self, db_input: Dict[str, Any]) -> Optional[Dict]:
         """Query based on given metadata.
         :param db_input:
         :type db_input: dict[str, Any]
@@ -652,7 +654,7 @@ class RESPDBClient(DBClient):
             data_b = self.packer(db_input)
             # query db
             result_b = self.redis.execute_command(
-                f"{self.db.name}.metadata_query", data_b
+                f"{self.db_name}.metadata_query", data_b
             )
             result = self.unpacker(result_b)
         except Exception as e:
@@ -662,7 +664,7 @@ class RESPDBClient(DBClient):
 
         return result
 
-    def _query(self, db_input: dict[str, Any]) -> Optional[dict]:
+    def _query(self, db_input: Dict[str, Any]) -> Optional[Dict]:
         """Query using a query string.
         :param db_input:
         :type db_input: dict[str, Any]
@@ -671,7 +673,7 @@ class RESPDBClient(DBClient):
         try:
             data_b = self.packer(db_input)
             # query db
-            result_b = self.redis.execute_command(f"{self.db.name}.query", data_b)
+            result_b = self.redis.execute_command(f"{self.db_name}.query", data_b)
             result = self.unpacker(result_b)
         except Exception as e:
             return self.__handle_exceptions(e)
@@ -683,8 +685,8 @@ class RESPDBClient(DBClient):
     def _deinitialize(self) -> None:
         """Deinitialize DB on the platform"""
 
-        self.logger.error(f"Deinitializing {self.db.name} on remote")
-        stop_params = {"node_name": self.db.name}
+        self.logger.error(f"Deinitializing {self.db_name} on remote")
+        stop_params = {"node_name": self.db_name}
         try:
             stop_params_b = self.packer(stop_params)
             self.redis.execute_command("remove_node", stop_params_b)
@@ -696,7 +698,7 @@ class RESPDBClient(DBClient):
         :rtype: str | None
         """
         try:
-            status_b = self.redis.execute_command(f"{self.db.name}.get_status")
+            status_b = self.redis.execute_command(f"{self.db_name}.get_status")
             status = self.unpacker(status_b)
         except Exception as e:
             return self.__handle_exceptions(e)
