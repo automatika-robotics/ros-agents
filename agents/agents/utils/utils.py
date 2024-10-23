@@ -62,10 +62,6 @@ def get_prompt_template(template: Union[str, Path]) -> Template:
                 loader=FileSystemLoader(Path(template).parent), autoescape=True
             )
             return env.get_template(Path(template).name)
-        except TemplateSyntaxError as e:
-            raise TemplateSyntaxError(
-                f"Incorrectly specified jinja2 template: {e}"
-            ) from e
         except Exception as e:
             raise Exception(
                 f"Exception occured while reading template from file: {e}"
@@ -75,9 +71,9 @@ def get_prompt_template(template: Union[str, Path]) -> Template:
         try:
             env = Environment()
             return env.from_string(format(template))
-        except TemplateSyntaxError as e:
-            raise TemplateSyntaxError(
-                f"Incorrectly specified jinja2 template: {e}"
+        except Exception as e:
+            raise Exception(
+                f"Exception occured while reading template from string: {e}"
             ) from e
 
 
