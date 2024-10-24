@@ -10,7 +10,7 @@ from agents.components import (
     MapEncoding,
     SemanticRouter,
 )
-from agents.config import SpeechToTextConfig, TextToSpeechConfig
+from agents.config import TextToSpeechConfig
 from agents.clients.roboml import HTTPModelClient, RESPModelClient, HTTPDBClient
 from agents.clients.ollama import OllamaClient
 from agents.models import Whisper, SpeechT5, Llava, Llama3_1, VisionModel
@@ -45,9 +45,6 @@ speech_to_text = SpeechToText(
     outputs=[query_topic],
     model_client=whisper_client,
     trigger=audio_in,
-    config=SpeechToTextConfig(
-        enable_vad=True
-    ),  # option to always listen for speech through the microphone
     component_name="speech_to_text",
 )
 
@@ -266,4 +263,4 @@ launcher.add_pkg(
 )
 launcher.on_fail(action_name="restart")
 launcher.fallback_rate = 1 / 10  # 0.1 Hz or 10 seconds
-launcher.bringup(ros_log_level="debug")
+launcher.bringup()

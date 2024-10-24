@@ -4,7 +4,7 @@ import json
 from typing import Any, Optional, Sequence, Union, List, Dict
 
 from ..clients.model_base import ModelClient
-from ..config import ModelComponentConfig
+from ..config import BaseComponentConfig
 from ..ros import FixedInput, Topic, SupportedType
 from .component_base import Component
 
@@ -17,13 +17,12 @@ class ModelComponent(Component):
         inputs: Optional[Sequence[Union[Topic, FixedInput]]] = None,
         outputs: Optional[Sequence[Topic]] = None,
         model_client: Optional[ModelClient] = None,
-        config: Optional[ModelComponentConfig] = None,
+        config: Optional[BaseComponentConfig] = None,
         trigger: Union[Topic, List[Topic], float] = 1.0,
         callback_group=None,
         component_name: str = "model_component",
         **kwargs,
     ):
-        self.config = config or ModelComponentConfig()
         # setup model client
         self.model_client = model_client if model_client else None
 
@@ -33,7 +32,7 @@ class ModelComponent(Component):
         super().__init__(
             inputs,
             outputs,
-            self.config,
+            config,
             trigger,
             callback_group,
             component_name,

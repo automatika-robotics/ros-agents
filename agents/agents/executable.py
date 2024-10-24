@@ -228,6 +228,7 @@ def main():
             routes=routes,
             db_client=db_client,
             config=config,
+            default_route=config._default_route,
             component_name=component_name,
             config_file=config_file,
         )

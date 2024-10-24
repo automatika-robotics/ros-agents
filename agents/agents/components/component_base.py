@@ -11,7 +11,7 @@ from ..ros import (
     SupportedType,
     Topic,
 )
-from ..config import ComponentConfig
+from ..config import BaseComponentConfig
 
 
 class Component(BaseComponent):
@@ -21,13 +21,15 @@ class Component(BaseComponent):
         self,
         inputs: Optional[Sequence[Union[Topic, FixedInput]]] = None,
         outputs: Optional[Sequence[Topic]] = None,
-        config: Optional[ComponentConfig] = None,
+        config: Optional[BaseComponentConfig] = None,
         trigger: Union[Topic, List[Topic], float] = 1.0,
         callback_group=None,
         component_name: str = "agents_component",
         **kwargs,
     ):
-        self.config: ComponentConfig = deepcopy(config) if config else ComponentConfig()  # type: ignore
+        self.config: BaseComponentConfig = (
+            deepcopy(config) if config else BaseComponentConfig()
+        )
         self.allowed_inputs: Dict[str, List[type[SupportedType]]]
         self.allowed_outputs: Dict[str, List[type[SupportedType]]]
 
@@ -207,10 +209,8 @@ class Component(BaseComponent):
         :return: Serialized inputs
         :rtype:  str | bytes | bytearray
         """
-        if not hasattr(self, "trig_topics"):
-            return "[]"
         if isinstance(self.trig_topic, Topic):
-            return json.dumps(self.trig_topic.to_json())
+            return self.trig_topic.to_json()
         elif isinstance(self.trig_topic, List):
             return json.dumps([t.to_json() for t in self.trig_topic])
         else:

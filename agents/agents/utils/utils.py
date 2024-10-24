@@ -20,10 +20,9 @@ from typing import (
 import cv2
 import numpy as np
 from attrs import Attribute
-from jinja2 import Environment, FileSystemLoader, TemplateSyntaxError
+from jinja2 import Environment, FileSystemLoader
 from jinja2.environment import Template
 from PIL import Image
-from rclpy.logging import get_logger
 from .pluralize import pluralize
 
 
@@ -127,7 +126,7 @@ def _check_type_from_signature(value, fn_param: inspect.Parameter) -> None:
     type_check = any(isinstance(value, t) for t in _annotated_types)
     if not type_check:
         raise TypeError(
-            f"Invalid type encountered for {fn_param.name}. Should be of type(s) {fn_param.annotation}"
+            f"Invalid type encountered for {fn_param.name}. Should be of type(s) {fn_param.annotation}. Passed value might be of type {type(value)}"
         )
 
 
