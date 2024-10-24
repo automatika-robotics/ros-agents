@@ -56,7 +56,7 @@ class VideoMessageMaker(Component):
         inputs: List[Topic],
         outputs: List[Topic],
         config: Optional[VideoMessageMakerConfig] = None,
-        trigger: Union[Topic, List[Topic], float] = 1.0,
+        trigger: Union[Topic, List[Topic]],
         callback_group=None,
         component_name: str = "video_maker_component",
         **kwargs,

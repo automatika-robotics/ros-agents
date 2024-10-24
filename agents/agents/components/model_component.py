@@ -1,5 +1,6 @@
 from abc import abstractmethod
 import inspect
+import json
 from typing import Any, Optional, Sequence, Union, List, Dict
 
 from ..clients.model_base import ModelClient
@@ -24,9 +25,8 @@ class ModelComponent(Component):
     ):
         self.config = config or ModelComponentConfig()
         # setup model client
-        if model_client:
-            self.model_client = model_client
-            self.config._model_client = model_client._get_json()
+        self.model_client = model_client if model_client else None
+
         self.handled_outputs: List[type[SupportedType]]
 
         # Initialize Component
@@ -54,8 +54,6 @@ class ModelComponent(Component):
         if self.model_client:
             self.model_client.check_connection()
             self.model_client.initialize()
-        else:
-            self.model_client = None
 
         # Activate component
         super().activate()
@@ -108,3 +106,25 @@ class ModelComponent(Component):
         raise NotImplementedError(
             "This method needs to be implemented by child components."
         )
+
+    def _update_cmd_args_list(self):
+        """
+        Update launch command arguments
+        """
+        super()._update_cmd_args_list()
+
+        self.launch_cmd_args = [
+            "--model_client",
+            self._get_model_client_json(),
+        ]
+
+    def _get_model_client_json(self) -> Union[str, bytes, bytearray]:
+        """
+        Serialize component routes to json
+
+        :return: Serialized inputs
+        :rtype:  str | bytes | bytearray
+        """
+        if not self.model_client:
+            return ""
+        return json.dumps(self.model_client.serialize())

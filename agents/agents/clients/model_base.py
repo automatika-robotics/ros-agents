@@ -55,7 +55,7 @@ class ModelClient(ABC):
         )
         self.inference_timeout = inference_timeout
 
-    def _get_json(self) -> Dict:
+    def serialize(self) -> Dict:
         """Get client json
         :rtype: Dict
         """

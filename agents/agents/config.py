@@ -1,12 +1,10 @@
-from types import NoneType
 from typing import Optional, Union, Dict, List
 from pathlib import Path
 
 from attrs import define, field, Factory
-from jinja2.environment import Template
 
 from .ros import base_validators, BaseComponentConfig, Topic, Route
-from .utils import validate_kwargs, get_prompt_template
+from .utils import validate_kwargs
 
 __all__ = [
     "LLMConfig",
@@ -21,21 +19,7 @@ __all__ = [
 
 
 @define(kw_only=True)
-class ComponentConfig(BaseComponentConfig):
-    """ComponentConfig"""
-
-    _trigger: Optional[Union[str, List[str]]] = field(default=None, alias="_trigger")
-
-
-@define(kw_only=True)
-class ModelComponentConfig(ComponentConfig):
-    """ModelComponentConfig"""
-
-    _model_client: Optional[Dict] = field(default=None, alias="_model_client")
-
-
-@define(kw_only=True)
-class LLMConfig(ModelComponentConfig):
+class LLMConfig(BaseComponentConfig):
     """
     Configuration for the Large Language Model (LLM) component.
 
@@ -82,7 +66,6 @@ class LLMConfig(ModelComponentConfig):
     history_size: int = 10  # number of user messages
     temperature: float = field(default=0.8, validator=base_validators.gt(0.0))
     max_new_tokens: int = field(default=100, validator=base_validators.gt(0))
-    _db_client: Optional[Dict] = field(default=None, alias="_db_client")
     _component_prompt: Optional[Union[str, Path]] = field(
         default=None, alias="_component_prompt"
     )
@@ -136,7 +119,7 @@ class MLLMConfig(LLMConfig):
 
 
 @define(kw_only=True)
-class VisionConfig(ModelComponentConfig):
+class VisionConfig(BaseComponentConfig):
     """Configuration for a detection component.
 
     The config allows you to customize the detection and/or tracking process.
@@ -172,7 +155,7 @@ class VisionConfig(ModelComponentConfig):
 
 
 @define(kw_only=True)
-class TextToSpeechConfig(ModelComponentConfig):
+class TextToSpeechConfig(BaseComponentConfig):
     """Configuration for a Text-To-Speech component.
 
     This class defines the configuration options for a Text-To-Speech component.
@@ -208,7 +191,7 @@ class TextToSpeechConfig(ModelComponentConfig):
 
 
 @define(kw_only=True)
-class SpeechToTextConfig(ModelComponentConfig):
+class SpeechToTextConfig(BaseComponentConfig):
     """
     Configuration for a Speech-To-Text component.
 
@@ -274,7 +257,7 @@ def _get_optional_topic(topic: Union[Topic, Dict]) -> Optional[Topic]:
 
 
 @define(kw_only=True)
-class MapConfig(ComponentConfig):
+class MapConfig(BaseComponentConfig):
     """Configuration for a MapEncoding component.
 
     :param map_name: The name of the map.
@@ -292,7 +275,6 @@ class MapConfig(ComponentConfig):
     distance_func: str = field(
         default="l2", validator=base_validators.in_(["l2", "ip", "cosine"])
     )
-    _db_client: Optional[Dict] = field(default=None, alias="_db_client")
     _position: Optional[Union[Topic, Dict]] = field(
         default=None, converter=_get_optional_topic, alias="_position"
     )
@@ -310,7 +292,7 @@ def _get_optional_route(route: Union[Route, Dict]) -> Optional[Route]:
 
 
 @define(kw_only=True)
-class SemanticRouterConfig(ComponentConfig):
+class SemanticRouterConfig(BaseComponentConfig):
     """Configuration parameters for a semantic router component.
 
     :param router_name: The name of the router.
@@ -335,14 +317,13 @@ class SemanticRouterConfig(ComponentConfig):
     maximum_distance: float = field(
         default=0.4, validator=base_validators.in_range(min_value=0.1, max_value=1.0)
     )
-    _db_client: Optional[Dict] = field(default=None, alias="_db_client")
     _default_route: Optional[Union[Route, Dict]] = field(
         default=None, converter=_get_optional_route, alias="_default_route"
     )
 
 
 @define(kw_only=True)
-class VideoMessageMakerConfig(ComponentConfig):
+class VideoMessageMakerConfig(BaseComponentConfig):
     """Configuration parameters for a video message maker component.
 
     :param min_video_frames: The minimum number of frames in a video segment. Default is 15, assuming a 0.5 second video at 30 fps.

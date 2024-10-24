@@ -1,3 +1,4 @@
+import json
 from abc import abstractmethod
 from copy import deepcopy
 from typing import Optional, Sequence, Union, List, Dict
@@ -49,8 +50,7 @@ class Component(BaseComponent):
         )
 
         # setup component run type and triggers
-        if not self.config._trigger:
-            self.trigger(trigger)
+        self.trigger(trigger)
 
     def activate(self):
         """
@@ -58,7 +58,7 @@ class Component(BaseComponent):
         """
         # Setup trigger based callback or frequency based timer
         if self.run_type is ComponentRunType.EVENT:
-            self.create_component_triggers()
+            self.create_all_triggers()
 
         super().activate()
 
@@ -81,26 +81,16 @@ class Component(BaseComponent):
         for callback in self.callbacks.values():
             self.__add_subscriber_to_callback(callback)
 
-    def _add_callback_to_trigger(self, trig_name: str) -> None:
-        callback = self.callbacks[trig_name]
-        self.trig_callbacks[trig_name] = callback
-        # remove trigger inputs from in_topics
-        del self.callbacks[trig_name]
-        self.__add_subscriber_to_callback(callback)
-        # Add execution step of the node as a post callback function
-        callback.on_callback_execute(self._execution_step)
-
-    def create_component_triggers(self) -> None:
+    def create_all_triggers(self) -> None:
         """
         Creates component triggers for events specified as triggers
         """
         self.get_logger().info("STARTING SUBSCRIBERS FOR TRIGGER TOPICS")
-        self.trig_callbacks = {}
-        if isinstance(self.config._trigger, list):
-            for t in self.config._trigger:
-                self._add_callback_to_trigger(t)
-        elif isinstance(self.config._trigger, str):
-            self._add_callback_to_trigger(self.config._trigger)
+        if hasattr(self, "trig_callbacks"):
+            for callback in self.trig_callbacks.values():
+                self.__add_subscriber_to_callback(callback)
+                # Add execution step of the node as a post callback function
+                callback.on_callback_execute(self._execution_step)
 
     def destroy_all_subscribers(self) -> None:
         """
@@ -116,20 +106,22 @@ class Component(BaseComponent):
             if callback._subscriber:
                 self.destroy_subscription(callback._subscriber)
 
-    def trigger(self, trigger: Union[Topic, List[Topic], float]) -> None:
+    def trigger(self, trigger: Union[Topic, list[Topic], float]) -> None:
         """
         Set component trigger
         """
         if isinstance(trigger, list):
-            triggers = []
             for t in trigger:
                 if t.name not in self.callbacks:
                     raise TypeError(
                         f"Invalid configuration for component trigger {t.name} - A trigger needs to be one of the inputs already defined in component inputs."
                     )
-                triggers.append(t.name)
-            self.config.run_type = ComponentRunType.EVENT
-            self.config._trigger = triggers
+            self.run_type = ComponentRunType.EVENT
+            self.trig_callbacks = {}
+            for t in trigger:
+                self.trig_callbacks[t.name] = self.callbacks[t.name]
+                # remove trigger inputs from in_topics
+                del self.callbacks[t.name]
 
         elif isinstance(trigger, Topic):
             if trigger.name not in self.callbacks:
@@ -137,12 +129,15 @@ class Component(BaseComponent):
                     f"Invalid configuration for component trigger {trigger.name} - A trigger needs to be one of the inputs already defined in component inputs."
                 )
             self.run_type = ComponentRunType.EVENT
-            self.config._trigger = trigger.name
+            self.trig_callbacks = {trigger.name: self.callbacks[trigger.name]}
+            del self.callbacks[trigger.name]
 
         else:
             self.run_type = ComponentRunType.TIMED
             # Set component loop_rate (Hz)
             self.config.loop_rate = 1 / trigger
+
+        self.trig_topic: Union[Topic, list[Topic], float] = trigger
 
     def validate_topics(
         self,
@@ -193,3 +188,30 @@ class Component(BaseComponent):
         raise NotImplementedError(
             "This method needs to be implemented by child components."
         )
+
+    def _update_cmd_args_list(self):
+        """
+        Update launch command arguments
+        """
+        super()._update_cmd_args_list()
+
+        self.launch_cmd_args = [
+            "--trigger",
+            self._get_trigger_json(),
+        ]
+
+    def _get_trigger_json(self) -> Union[str, bytes, bytearray]:
+        """
+        Serialize component routes to json
+
+        :return: Serialized inputs
+        :rtype:  str | bytes | bytearray
+        """
+        if not hasattr(self, "trig_topics"):
+            return "[]"
+        if isinstance(self.trig_topic, Topic):
+            return json.dumps(self.trig_topic.to_json())
+        elif isinstance(self.trig_topic, List):
+            return json.dumps([t.to_json() for t in self.trig_topic])
+        else:
+            return json.dumps(self.trig_topic)

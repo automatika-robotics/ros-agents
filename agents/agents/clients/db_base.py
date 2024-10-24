@@ -54,7 +54,7 @@ class DBClient(ABC):
         )
         self.response_timeout = response_timeout
 
-    def _get_json(self) -> Dict:
+    def serialize(self) -> Dict:
         """Get client json
         :rtype: Dict
         """

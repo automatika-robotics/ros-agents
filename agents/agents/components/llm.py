@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from typing import Any, Optional, Union, Callable, List, Dict
 
@@ -83,11 +84,7 @@ class LLM(ModelComponent):
 
         self.model_client = model_client
 
-        if db_client:
-            self.db_client = db_client
-            self.config._db_client = db_client._get_json()
-        else:
-            self.db_client = None
+        self.db_client = db_client if db_client else None
 
         self.component_prompt = (
             get_prompt_template(self.config._component_prompt)
@@ -479,3 +476,25 @@ class LLM(ModelComponent):
         self.tools[tool_description["name"]] = tool
         self.tool_descriptions.append(tool_description)
         self.tool_response_flags[tool_description["name"]] = send_tool_response_to_model
+
+    def _update_cmd_args_list(self):
+        """
+        Update launch command arguments
+        """
+        super()._update_cmd_args_list()
+
+        self.launch_cmd_args = [
+            "--db_client",
+            self._get_db_client_json(),
+        ]
+
+    def _get_db_client_json(self) -> Union[str, bytes, bytearray]:
+        """
+        Serialize component routes to json
+
+        :return: Serialized inputs
+        :rtype:  str | bytes | bytearray
+        """
+        if not self.db_client:
+            return ""
+        return json.dumps(self.db_client.serialize())

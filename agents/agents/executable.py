@@ -1,6 +1,6 @@
 import json
 import argparse
-from typing import List, Dict
+from typing import List, Dict, Union
 
 import rclpy
 import setproctitle
@@ -47,6 +47,21 @@ def _parse_args() -> tuple[argparse.Namespace, List[str]]:
         help="Map Encoding layers",
     )
     parser.add_argument(
+        "--trigger",
+        type=str,
+        help="Component trigger",
+    )
+    parser.add_argument(
+        "--model_client",
+        type=str,
+        help="Model Client",
+    )
+    parser.add_argument(
+        "--db_client",
+        type=str,
+        help="DB Client",
+    )
+    parser.add_argument(
         "--config_file", type=str, help="Path to configuration YAML file"
     )
     parser.add_argument(
@@ -63,7 +78,9 @@ def _parse_args() -> tuple[argparse.Namespace, List[str]]:
     return parser.parse_known_args()
 
 
-def _parse_component_config(args: argparse.Namespace) -> all_configs.ComponentConfig:
+def _parse_component_config(
+    args: argparse.Namespace,
+) -> all_configs.BaseComponentConfig:
     """Parse the component config object
 
     :param args: Command line arguments
@@ -88,6 +105,30 @@ def _parse_component_config(args: argparse.Namespace) -> all_configs.ComponentCo
     return config
 
 
+def _parse_trigger(trigger_str: str) -> Union[Topic, List[Topic], float]:
+    """Parse component trigger json string
+
+    :param trigger_str: Trigger JSON string
+    :type trigger_str: str
+
+    :return: Trigger topics or float
+    :rtype: Topic | List[Topic] | float
+    """
+    trigger_json = json.loads(trigger_str)
+    if isinstance(trigger_json, List):
+        return [Topic(**json.loads(t)) for t in trigger_json]
+    elif isinstance(trigger_json, Dict):
+        return Topic(**trigger_json)
+    else:
+        # return float
+        return trigger_json
+
+
+def _deserialize_topics(serialized_topics: str) -> List[Dict]:
+    list_of_str = json.loads(serialized_topics)
+    return [json.loads(t) for t in list_of_str]
+
+
 def _parse_ros_args(args_names: List[str]) -> List[str]:
     """Parse ROS arguments from command line arguments
 
@@ -107,11 +148,6 @@ def _parse_ros_args(args_names: List[str]) -> List[str]:
     else:
         ros_specific_args = []
     return ros_specific_args
-
-
-def _deserialize_topics(serialized_topics: str) -> List[Dict]:
-    list_of_str = json.loads(serialized_topics)
-    return [json.loads(t) for t in list_of_str]
 
 
 def main():
@@ -156,7 +192,7 @@ def main():
     # Get Yaml config file if provided
     config_file = args.config_file or None
 
-    # Get inputs/outputs
+    # Get inputs/outputs/layers/routes
     inputs = (
         [
             FixedInput(**i) if i.get("fixed") else Topic(**i)
@@ -179,12 +215,14 @@ def main():
         [Route(**r) for r in _deserialize_topics(args.routes)] if args.routes else None
     )
 
+    # Get triggers
+    trigger = _parse_trigger(args.trigger)
+
     # Init the component
     # Semantic Router Component
     if component_type == all_components.SemanticRouter.__name__:
-        db_client = getattr(clients, config._db_client["client_type"])(
-            **config._db_client
-        )
+        db_client_json = json.loads(args.db_client)
+        db_client = getattr(clients, db_client_json["client_type"])(**db_client_json)
         component = comp_class(
             inputs=inputs,
             routes=routes,
@@ -195,39 +233,42 @@ def main():
         )
     # Map Encoding Component
     elif component_type == all_components.MapEncoding.__name__:
-        db_client = getattr(clients, config._db_client["client_type"])(
-            **config._db_client
-        )
+        db_client_json = json.loads(args.db_client)
+        db_client = getattr(clients, db_client_json["client_type"])(**db_client_json)
         component = comp_class(
             layers=layers,
             position=config._position,
             map_topic=config._map_topic,
             db_client=db_client,
             config=config,
+            trigger=trigger,
             component_name=component_name,
             config_file=config_file,
         )
 
     # All other components
     else:
-        model_client = (
-            getattr(clients, config._model_client["client_type"])(
-                **config._model_client
+        if args.model_client:
+            model_client_json = json.loads(args.model_client)
+            model_client = getattr(clients, model_client_json["client_type"])(
+                **model_client_json
             )
-            if hasattr(config, "_model_client") and config._model_client
-            else None
-        )
-        db_client = (
-            getattr(clients, config._db_client["client_type"])(**config._db_client)
-            if hasattr(config, "_db_client") and config._db_client
-            else None
-        )
+        else:
+            model_client = None
+        if args.db_client:
+            db_client_json = json.loads(args.db_client)
+            db_client = getattr(clients, db_client_json["client_type"])(
+                **db_client_json
+            )
+        else:
+            db_client = None
 
         component = comp_class(
             inputs=inputs,
             outputs=outputs,
             model_client=model_client,
             db_client=db_client,
+            trigger=trigger,
             config=config,
             component_name=component_name,
             config_file=config_file,

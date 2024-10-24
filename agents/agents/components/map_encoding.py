@@ -76,7 +76,6 @@ class MapEncoding(Component):
             "Optional": [Detections],
         }
         self.db_client = db_client
-        self.config._db_client = db_client._get_json()
 
         self.position = self.config._position = position
 
@@ -99,9 +98,8 @@ class MapEncoding(Component):
         """activate."""
         self.get_logger().debug(f"Current Status: {self.health_status.value}")
         # initialize db client
-        if self.db_client:
-            self.db_client.check_connection()
-            self.db_client.initialize()
+        self.db_client.check_connection()
+        self.db_client.initialize()
 
         # activate the rest
         super().activate()
@@ -309,6 +307,19 @@ class MapEncoding(Component):
             input.name: input.msg_type.callback(input) for input in all_inputs
         }
 
+    @component_action
+    def add_point(self, layer: MapLayer, point: tuple[np.ndarray, str]) -> None:
+        """Component action to add a user defined point to the map collection.
+        This action can be executed on an event.
+
+        :param layer: Layer to which the point should be added
+        :type layer: MapLayer
+        :param point: A tuple of position (numpy array) and text data (str)
+        :type point: tuple[np.ndarray, str]
+        :rtype: None
+        """
+        self._fill_out_pre_defined(layer, point)
+
     def _update_cmd_args_list(self):
         """
         Update launch command arguments
@@ -318,6 +329,11 @@ class MapEncoding(Component):
         self.launch_cmd_args = [
             "--layers",
             self._get_layers_json(),
+        ]
+
+        self.launch_cmd_args = [
+            "--db_client",
+            self._get_db_client_json(),
         ]
 
     def _get_layers_json(self) -> Union[str, bytes, bytearray]:
@@ -331,15 +347,13 @@ class MapEncoding(Component):
             return "[]"
         return json.dumps([layer.to_json() for layer in self.layers_dict.values()])
 
-    @component_action
-    def add_point(self, layer: MapLayer, point: tuple[np.ndarray, str]) -> None:
-        """Component action to add a user defined point to the map collection.
-        This action can be executed on an event.
-
-        :param layer: Layer to which the point should be added
-        :type layer: MapLayer
-        :param point: A tuple of position (numpy array) and text data (str)
-        :type point: tuple[np.ndarray, str]
-        :rtype: None
+    def _get_db_client_json(self) -> Union[str, bytes, bytearray]:
         """
-        self._fill_out_pre_defined(layer, point)
+        Serialize component routes to json
+
+        :return: Serialized inputs
+        :rtype:  str | bytes | bytearray
+        """
+        if not self.db_client:
+            return ""
+        return json.dumps(self.db_client.serialize())

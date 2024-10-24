@@ -90,7 +90,6 @@ class SemanticRouter(Component):
         self.allowed_inputs = {"Required": [String]}
         self.allowed_outputs = {"Required": [String]}
         self.db_client = db_client
-        self.config._db_client = db_client._get_json()
 
         super().__init__(
             inputs,
@@ -113,9 +112,8 @@ class SemanticRouter(Component):
     def activate(self):
         self.get_logger().debug(f"Current Status: {self.health_status.value}")
         # initialize db client
-        if self.db_client:
-            self.db_client.check_connection()
-            self.db_client.initialize()
+        self.db_client.check_connection()
+        self.db_client.initialize()
 
         # activate the rest
         super().activate()
@@ -203,6 +201,11 @@ class SemanticRouter(Component):
             self._get_routes_json(),
         ]
 
+        self.launch_cmd_args = [
+            "--db_client",
+            self._get_db_client_json(),
+        ]
+
     def _get_routes_json(self) -> Union[str, bytes, bytearray]:
         """
         Serialize component routes to json
@@ -213,3 +216,14 @@ class SemanticRouter(Component):
         if not hasattr(self, "routes_dict"):
             return "[]"
         return json.dumps([route.to_json() for route in self.routes_dict.values()])
+
+    def _get_db_client_json(self) -> Union[str, bytes, bytearray]:
+        """
+        Serialize component routes to json
+
+        :return: Serialized inputs
+        :rtype:  str | bytes | bytearray
+        """
+        if not self.db_client:
+            return ""
+        return json.dumps(self.db_client.serialize())
