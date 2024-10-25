@@ -1,4 +1,4 @@
-# Bringing it all together 🤖
+# Making the System Robust And Production Ready
 
 In this example we will combine everything we implemented in the previous examples to create one big graph of components. Afterwards we will analyze what we have accomplished. Here is what the code looks like:
 

@@ -384,7 +384,7 @@ class RESPModelClient(ModelClient):
 
         except ModuleNotFoundError as e:
             raise ModuleNotFoundError(
-                "In order to use the RESP clients, you need redis and msgpack packages installed. You can install it with 'pip install redis[hiredis] msgpack msgpack_numpy'"
+                "In order to use the RESP clients, you need redis and msgpack packages installed. You can install it with 'pip install redis[hiredis] msgpack msgpack-numpy'"
             ) from e
         self._check_connection()
 
@@ -549,7 +549,7 @@ class RESPDBClient(DBClient):
 
         except ModuleNotFoundError as e:
             raise ModuleNotFoundError(
-                "In order to use the RESP clients, you need redis and msgpack packages installed. You can install it with 'pip install redis[hiredis] msgpack msgpack_numpy'"
+                "In order to use the RESP clients, you need redis and msgpack packages installed. You can install it with 'pip install redis[hiredis] msgpack msgpack-numpy'"
             ) from e
         self._check_connection()
 

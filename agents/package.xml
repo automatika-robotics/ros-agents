@@ -8,19 +8,24 @@
   <license>MIT License Copyright (c) 2024 Automatika Robotics</license>
 
   <depend>rclpy</depend>
+  <depend>std_msgs</depend>
+  <depend>sensor_msgs</depend>
+
+  <depend>python3-pip</depend>
+  <depend>python3-numpy</depend>
+  <depend>python3-pillow</depend>
+  <depend>python3-opencv</depend>
+  <depend>python3-jinja2</depend>
+  <depend>python3-msgpack</depend>
+  <depend>python3-msgpack-numpy</depend>
+  <depend>python3-setproctitle</depend>
 
   <build_depend>rosidl_default_generators</build_depend>
   <exec_depend>rosidl_default_runtime</exec_depend>
   <member_of_group>rosidl_interface_packages</member_of_group>
 
-  <exec_depend>std_msgs</exec_depend>
-  <exec_depend>nav_msgs</exec_depend>
-  <exec_depend>sensor_msgs</exec_depend>
-  <exec_depend>leibniz_interfaces</exec_depend>
+  <exec_depend>agents_interfaces</exec_depend>
 
-  <test_depend>ament_copyright</test_depend>
-  <test_depend>ament_flake8</test_depend>
-  <test_depend>ament_pep257</test_depend>
   <test_depend>python3-pytest</test_depend>
 
   <export>

@@ -45,14 +45,13 @@ The core of ROS Agents is agnostic to model serving platforms. It currently supp
 Install python dependencies
 
 ```shell
-pip install -U pillow numpy opencv-python-headless hiredis msgpack msgpack_numpy 'attrs>=23.2.0'`
+pip install pillow numpy opencv-python-headless 'attrs>=23.2.0' jinja2 httpx setproctitle msgpack msgpack-numpy numpy-quaternion
 ```
 
-Download ROS Sugar and Automatika ROS (common utils) packages.
+Download ROS Sugar
 
 ```shell
 git clone https://github.com/automatika-robotics/ros-sugar
-git clone https://github.com/automatika-robotics/automatika-ros
 ```
 
 #### Install ROS Agents
@@ -98,8 +97,7 @@ mllm.set_topic_prompt(text0, template="""You are an amazing and funny robot.
 )
 # Launch the component
 launcher = Launcher()
-launcher.add_pkg(components=[mllm],
-                 activate_all_components_on_start=True)
+launcher.add_pkg(components=[mllm])
 launcher.bringup()
 ```
 

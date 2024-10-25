@@ -41,5 +41,5 @@ mllm.set_component_prompt(
     Answer the following about this image: {{ text0 }}"""
 )
 launcher = Launcher()
-launcher.add_pkg(components=[vision, mllm], activate_all_components_on_start=True)
+launcher.add_pkg(components=[vision, mllm])
 launcher.bringup()

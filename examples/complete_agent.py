@@ -258,9 +258,6 @@ launcher.add_pkg(
         speech_to_text,
         text_to_speech,
         vision,
-    ],
-    activate_all_components_on_start=True,
+    ]
 )
-launcher.on_fail(action_name="restart")
-launcher.fallback_rate = 1 / 10  # 0.1 Hz or 10 seconds
 launcher.bringup()
