@@ -33,6 +33,7 @@ autodoc2_packages = [
             "model_component.py",
             "model_base.py",
             "db_base.py",
+            "executable.py",
         ],
     },
 ]
@@ -42,6 +43,7 @@ autodoc2_class_docstring = "both"  # bug in autodoc2, should be `merge`
 autodoc2_render_plugin = "myst"
 autodoc2_hidden_objects = ["private", "dunder", "undoc"]
 autodoc2_module_all_regexes = [
+    r"agents.config",
     r"agents.models",
     r"agents.vectordbs",
     r"agents.ros",

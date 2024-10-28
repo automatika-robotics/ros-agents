@@ -1,8 +1,8 @@
+import json
 from pathlib import Path
-from typing import Any, Optional, Union, Callable
+from typing import Any, Optional, Union, Callable, List, Dict
 
 from agents.clients.roboml import OllamaModel
-from jinja2.environment import Template
 
 from ..callbacks import TextCallback
 from ..clients.db_base import DBClient
@@ -63,12 +63,12 @@ class LLM(ModelComponent):
     def __init__(
         self,
         *,
-        inputs: list[Union[Topic, FixedInput]],
-        outputs: list[Topic],
+        inputs: List[Union[Topic, FixedInput]],
+        outputs: List[Topic],
         model_client: ModelClient,
         config: Optional[LLMConfig] = None,
         db_client: Optional[DBClient] = None,
-        trigger: Union[Topic, list[Topic], float] = 1,
+        trigger: Union[Topic, List[Topic], float] = 1.0,
         callback_group=None,
         component_name: str = "llm_component",
         **kwargs,
@@ -83,15 +83,20 @@ class LLM(ModelComponent):
         self.handled_outputs = [String]
 
         self.model_client = model_client
-        self.db_client = db_client if db_client else None
-        self.messages: list[dict] = []
 
-        self._component_template: Optional[Template] = None
+        self.db_client = db_client if db_client else None
+
+        self.component_prompt = (
+            get_prompt_template(self.config._component_prompt)
+            if self.config._component_prompt
+            else None
+        )
+        self.messages: List[Dict] = []
 
         # tool calling
-        self.tools: dict[str, Callable] = {}
-        self.tool_descriptions: list[dict] = []
-        self.tool_response_flags: dict[str, bool] = {}
+        self.tools: Dict[str, Callable] = {}
+        self.tool_descriptions: List[Dict] = []
+        self.tool_response_flags: Dict[str, bool] = {}
 
         super().__init__(
             inputs,
@@ -105,6 +110,19 @@ class LLM(ModelComponent):
         )
 
     def activate(self):
+        # add component prompt if set after init
+        self.component_prompt = (
+            get_prompt_template(self.config._component_prompt)
+            if self.config._component_prompt
+            else None
+        )
+        # add topic templates
+        if self.config._topic_prompts:
+            for topic_name, template in self.config._topic_prompts.items():
+                callback = self.callbacks[topic_name]
+                if isinstance(callback, TextCallback):
+                    callback._template = get_prompt_template(template)
+
         # initialize db client
         if self.db_client:
             self.db_client.check_connection()
@@ -124,7 +142,7 @@ class LLM(ModelComponent):
 
     @validate_func_args
     def add_documents(
-        self, ids: list[str], metadatas: list[dict], documents: list[str]
+        self, ids: List[str], metadatas: List[Dict], documents: List[str]
     ) -> None:
         """Add documents to vector DB for Retreival Augmented Generation (RAG).
 
@@ -189,7 +207,7 @@ class LLM(ModelComponent):
             )
             return rag_docs
 
-    def _handle_chat_history(self, message: dict) -> None:
+    def _handle_chat_history(self, message: Dict) -> None:
         """Internal handler for chat history"""
         if self.config.chat_history:
             self.messages.append(message)
@@ -202,7 +220,7 @@ class LLM(ModelComponent):
             self.messages = []
             self.messages.append(message)
 
-    def _handle_tool_calls(self, result: dict) -> Optional[dict]:
+    def _handle_tool_calls(self, result: Dict) -> Optional[Dict]:
         """Internal handler for tool calling"""
         if not result.get("tool_calls"):
             self.get_logger().warning(
@@ -245,7 +263,7 @@ class LLM(ModelComponent):
             # return result with its output set to last function response
             return result
 
-    def _create_input(self, *_, **kwargs) -> Optional[dict[str, Any]]:
+    def _create_input(self, *_, **kwargs) -> Optional[Dict[str, Any]]:
         """Create inference input for LLM models
         :param args:
         :param kwargs:
@@ -288,9 +306,7 @@ class LLM(ModelComponent):
 
         # set system prompt template
         query = (
-            self._component_template.render(context)
-            if self._component_template
-            else query
+            self.component_prompt.render(context) if self.component_prompt else query
         )
 
         # attach rag results to templated query if available
@@ -386,7 +402,7 @@ class LLM(ModelComponent):
                 raise TypeError(
                     f"Prompt can only be set for a topic of type String, {callback.input_topic.name} is of type {callback.input_topic.msg_type}"
                 )
-            callback._template = get_prompt_template(template)
+            self.config._topic_prompts[input_topic.name] = template
 
     def set_component_prompt(self, template: Union[str, Path]) -> None:
         """Set component level prompt template which can use multiple input topics.
@@ -405,12 +421,12 @@ class LLM(ModelComponent):
         llm_component.set_component_prompt(template="You are an amazing and funny robot. You answer all questions with short and concise answers. You can see the following items: {{ detections }}. Please answer the following: {{ text0 }}")
         ```
         """
-        self._component_template = get_prompt_template(template)
+        self.config._component_prompt = template
 
     def register_tool(
         self,
         tool: Callable,
-        tool_description: dict,
+        tool_description: Dict,
         send_tool_response_to_model: bool = False,
     ) -> None:
         """Register a tool with the component which can be called by the model. If the send_tool_response_to_model flag is set to True than the output of the tool is sent back to the model and final output of the model is sent to component publishers (i.e. the model "uses" the tool to give a more accurate response.). If the flag is set to False than the output of the tool is sent to publishers of the component.
@@ -460,3 +476,25 @@ class LLM(ModelComponent):
         self.tools[tool_description["name"]] = tool
         self.tool_descriptions.append(tool_description)
         self.tool_response_flags[tool_description["name"]] = send_tool_response_to_model
+
+    def _update_cmd_args_list(self):
+        """
+        Update launch command arguments
+        """
+        super()._update_cmd_args_list()
+
+        self.launch_cmd_args = [
+            "--db_client",
+            self._get_db_client_json(),
+        ]
+
+    def _get_db_client_json(self) -> Union[str, bytes, bytearray]:
+        """
+        Serialize component routes to json
+
+        :return: Serialized inputs
+        :rtype:  str | bytes | bytearray
+        """
+        if not self.db_client:
+            return ""
+        return json.dumps(self.db_client.serialize())

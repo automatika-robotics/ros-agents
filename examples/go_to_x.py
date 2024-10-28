@@ -74,5 +74,5 @@ goto.add_publisher_preprocessor(goal_point, llm_answer_to_goal_point)
 
 # Launch the component
 launcher = Launcher()
-launcher.add_pkg(components=[goto], activate_all_components_on_start=True)
+launcher.add_pkg(components=[goto])
 launcher.bringup()

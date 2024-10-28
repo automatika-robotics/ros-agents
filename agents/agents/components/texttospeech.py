@@ -1,7 +1,7 @@
 import queue
 import threading
 from io import BytesIO
-from typing import Any, Union, Optional
+from typing import Any, Union, Optional, List, Dict
 import numpy as np
 import base64
 
@@ -59,11 +59,11 @@ class TextToSpeech(ModelComponent):
     def __init__(
         self,
         *,
-        inputs: list[Topic],
-        outputs: Optional[list[Topic]] = None,
+        inputs: List[Topic],
+        outputs: Optional[List[Topic]] = None,
         model_client: ModelClient,
         config: Optional[TextToSpeechConfig] = None,
-        trigger: Union[Topic, list[Topic], float],
+        trigger: Union[Topic, List[Topic]],
         callback_group=None,
         component_name: str = "texttospeech_component",
         **kwargs,
@@ -105,7 +105,7 @@ class TextToSpeech(ModelComponent):
         # Deactivate component
         super().deactivate()
 
-    def _create_input(self, *_, **kwargs) -> Optional[dict[str, Any]]:
+    def _create_input(self, *_, **kwargs) -> Optional[Dict[str, Any]]:
         """Create inference input for TextToSpeech models
         :param args:
         :param kwargs:
@@ -115,6 +115,9 @@ class TextToSpeech(ModelComponent):
         # set query as trigger
         trigger = kwargs.get("topic")
         if not trigger:
+            self.get_logger().error(
+                "Trigger topic not found. TextToSpeech component needs to be given a valid trigger topic."
+            )
             return None
         query = self.trig_callbacks[trigger.name].get_output()
         if not query:

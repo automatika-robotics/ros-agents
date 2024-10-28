@@ -1,6 +1,6 @@
 """The following classes provide wrappers for data being transmitted via ROS topics. These classes form the inputs and outputs of [Components](agents.components.md)."""
 
-from typing import Union, Any
+from typing import Union, Any, Dict, List
 import numpy as np
 from attrs import define, field, Factory
 
@@ -24,7 +24,6 @@ from ros_sugar.io.topic import _normalize_topic_name
 from ros_sugar.config import (
     BaseComponentConfig,
     ComponentRunType,
-    QoSConfig,
     BaseAttrs,
     base_validators,
 )
@@ -58,7 +57,6 @@ __all__ = [
     "component_action",
     "MapLayer",
     "Route",
-    "QoSConfig",
 ]
 
 
@@ -78,7 +76,7 @@ class Video(SupportedType):
     callback = VideoCallback
 
     @classmethod
-    def convert(cls, output: Union[list[ROSImage], list[np.ndarray]], **_) -> ROSVideo:
+    def convert(cls, output: Union[List[ROSImage], List[np.ndarray]], **_) -> ROSVideo:
         """
         Takes an list of images and retunrs a video message (Image Array)
         :return: Video
@@ -96,7 +94,7 @@ class Detection(SupportedType):
     callback = None  # not defined
 
     @classmethod
-    def convert(cls, output: dict, img: np.ndarray, **_) -> Detection2D:
+    def convert(cls, output: Dict, img: np.ndarray, **_) -> Detection2D:
         """
         Takes object detection data and converts it into a ROS message
         of type Detection2D
@@ -126,7 +124,7 @@ class Detections(SupportedType):
     callback = ObjectDetectionCallback
 
     @classmethod
-    def convert(cls, output: list, images: list, **_) -> Detections2D:
+    def convert(cls, output: List, images: List, **_) -> Detections2D:
         """
         Takes object detections data and converts it into a ROS message
         of type Detections2D
@@ -147,7 +145,7 @@ class Tracking(SupportedType):
     callback = None  # Not defined
 
     @classmethod
-    def convert(cls, output: dict, img: np.ndarray, **_) -> ROSTracking:
+    def convert(cls, output: Dict, img: np.ndarray, **_) -> ROSTracking:
         """
         Takes tracking data and converts it into a ROS message
         of type Tracking
@@ -186,7 +184,7 @@ class Trackings(SupportedType):
     callback = None  # Not defined
 
     @classmethod
-    def convert(cls, output: list, images: list, **_) -> ROSTrackings:
+    def convert(cls, output: List, images: List, **_) -> ROSTrackings:
         """
         Takes trackings data and converts it into a ROS message
         of type ROSTrackings
@@ -228,7 +226,7 @@ class Topic(BaseTopic):
             )
         ),
     )
-    qos_profile: QoSConfig = Factory(QoSConfig)
+    # qos_profile is configured in parent class
     ros_msg_type: Any = field(init=False)
 
     @msg_type.validator
@@ -274,6 +272,21 @@ class FixedInput(BaseAttrs):
     fixed: Any = field()
 
 
+def _get_topic(topic: Union[Topic, Dict]) -> Topic:
+    if isinstance(topic, Topic):
+        return topic
+    return Topic(**topic)
+
+
+def _get_np_coordinates(
+    pre_defined: List[Union[List, tuple[np.ndarray, str]]],
+) -> List[Union[List, tuple[np.ndarray, str]]]:
+    pre_defined_list = []
+    for item in pre_defined:
+        pre_defined_list.append((np.array(item[0]), item[1]))
+    return pre_defined_list
+
+
 @define(kw_only=True)
 class MapLayer(BaseAttrs):
     """A MapLayer represents a single input for a MapEncoding component. It can subscribe to a specific text topic.
@@ -293,12 +306,14 @@ class MapLayer(BaseAttrs):
     ```
     """
 
-    subscribes_to: Topic = field()
+    subscribes_to: Union[Topic, Dict] = field(converter=_get_topic)
     temporal_change: bool = field(default=False)
     resolution_multiple: int = field(
         default=1, validator=base_validators.in_range(min_value=0.1, max_value=10)
     )
-    pre_defined: list[tuple[np.ndarray, str]] = Factory(list)
+    pre_defined: List[Union[List, tuple[np.ndarray, str]]] = field(
+        default=Factory(list), converter=_get_np_coordinates
+    )
 
 
 @define(kw_only=True)
@@ -317,5 +332,5 @@ class Route(BaseAttrs):
     ```
     """
 
-    routes_to: Topic = field()
-    samples: list[str] = field()
+    routes_to: Union[Topic, Dict] = field(converter=_get_topic)
+    samples: List[str] = field()

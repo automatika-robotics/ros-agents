@@ -1,5 +1,5 @@
 import math
-from typing import Optional, Union
+from typing import Optional, Union, List
 
 import cv2
 import numpy as np
@@ -53,14 +53,19 @@ class VideoMessageMaker(Component):
     def __init__(
         self,
         *,
-        inputs: list[Topic],
-        outputs: list[Topic],
+        inputs: List[Topic],
+        outputs: List[Topic],
         config: Optional[VideoMessageMakerConfig] = None,
-        trigger: Union[Topic, list[Topic]],
+        trigger: Union[Topic, List[Topic]],
         callback_group=None,
         component_name: str = "video_maker_component",
         **kwargs,
     ):
+        if isinstance(trigger, float):
+            raise TypeError(
+                "VideoMessageMaker component needs to be given a valid trigger topic. It cannot be started as a timed component."
+            )
+
         self.config: VideoMessageMakerConfig = config or VideoMessageMakerConfig()
         self.allowed_inputs = {"Required": [Image]}
         self.allowed_outputs = {"Required": [Video]}
@@ -75,7 +80,7 @@ class VideoMessageMaker(Component):
             **kwargs,
         )
 
-        self._frames: list[ROSImage] = []
+        self._frames: List[ROSImage] = []
         self._last_frame: Optional[np.ndarray] = None
         self._capture: bool = False
 

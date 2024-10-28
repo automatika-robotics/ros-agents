@@ -20,13 +20,13 @@ class VideoCallback(GenericCallback):
     Video Callback class. Its get method saves a video as list of bytes
     """
 
-    def __init__(self, input_topic) -> None:
+    def __init__(self, input_topic, node_name: Optional[str] = None) -> None:
         """
         Constructs a new instance.
         :param      input_topic:  Subscription topic
         :type       input_topic:  Input
         """
-        super().__init__(input_topic)
+        super().__init__(input_topic, node_name)
         # fixed video needs to be a path to cv2 readable video
         if hasattr(input_topic, "fixed"):
             if os.path.isfile(input_topic.fixed):
@@ -79,14 +79,14 @@ class ObjectDetectionCallback(GenericCallback):
     Its get method returns the bounding box data
     """
 
-    def __init__(self, input_topic) -> None:
+    def __init__(self, input_topic, node_name: Optional[str] = None) -> None:
         """
         Constructs a new instance.
 
         :param      input_topic:  Subscription topic
         :type       input_topic:  str
         """
-        super().__init__(input_topic)
+        super().__init__(input_topic, node_name)
         self.msg = input_topic.fixed if hasattr(input_topic, "fixed") else None
 
     def _get_output(self, **_) -> Optional[str]:

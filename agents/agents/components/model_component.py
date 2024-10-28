@@ -1,6 +1,7 @@
 from abc import abstractmethod
 import inspect
-from typing import Any, Optional, Sequence, Union
+import json
+from typing import Any, Optional, Sequence, Union, List, Dict
 
 from ..clients.model_base import ModelClient
 from ..config import BaseComponentConfig
@@ -17,14 +18,15 @@ class ModelComponent(Component):
         outputs: Optional[Sequence[Topic]] = None,
         model_client: Optional[ModelClient] = None,
         config: Optional[BaseComponentConfig] = None,
-        trigger: Union[Topic, list[Topic], float] = 1.0,
+        trigger: Union[Topic, List[Topic], float] = 1.0,
         callback_group=None,
         component_name: str = "model_component",
         **kwargs,
     ):
         # setup model client
         self.model_client = model_client if model_client else None
-        self.handled_outputs: list[type[SupportedType]]
+
+        self.handled_outputs: List[type[SupportedType]]
 
         # Initialize Component
         super().__init__(
@@ -69,20 +71,20 @@ class ModelComponent(Component):
 
     def _validate_output_topics(self) -> None:
         """
-        Verify that output topics that are not handled, have pre-processing functions provided
+        Verify that output topics that are not handled, have pre-processing functions provided. We just check that there is a pre-processing function and do not check whether the functions have output of the corresponding type.
         """
 
         if hasattr(self, "publishers_dict") and hasattr(self, "handled_outputs"):
             for name, pub in self.publishers_dict.items():
                 if pub.output_topic.msg_type not in self.handled_outputs and (
-                    not pub._pre_processors
+                    pub.output_topic.name not in self._external_processors.keys()
                 ):
                     func_body = inspect.getsource(pub.output_topic.msg_type.convert)
                     raise TypeError(f"""{type(self).__name__} components can only handle output topics of type(s) {self.handled_outputs} automatically. {name} is of type {pub.output_topic.msg_type}. Please provide a pre-processing function for this topic and attach it to the topic by calling the `add_publisher_preprocessor` on the component {self.node_name}. Make sure the output of the pre-processor function can be passed as parameter output to the following function:
 {func_body}""")
 
     @abstractmethod
-    def _create_input(self, *args, **kwargs) -> Union[dict[str, Any], None]:
+    def _create_input(self, *args, **kwargs) -> Union[Dict[str, Any], None]:
         """_create_input.
 
         :param args:
@@ -103,3 +105,25 @@ class ModelComponent(Component):
         raise NotImplementedError(
             "This method needs to be implemented by child components."
         )
+
+    def _update_cmd_args_list(self):
+        """
+        Update launch command arguments
+        """
+        super()._update_cmd_args_list()
+
+        self.launch_cmd_args = [
+            "--model_client",
+            self._get_model_client_json(),
+        ]
+
+    def _get_model_client_json(self) -> Union[str, bytes, bytearray]:
+        """
+        Serialize component routes to json
+
+        :return: Serialized inputs
+        :rtype:  str | bytes | bytearray
+        """
+        if not self.model_client:
+            return ""
+        return json.dumps(self.model_client.serialize())

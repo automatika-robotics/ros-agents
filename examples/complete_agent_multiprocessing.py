@@ -1,13 +1,16 @@
-# Bringing it all together 🤖
-
-In this example we will combine everything we implemented in the previous examples to create one big graph of components. Afterwards we will analyze what we have accomplished. Here is what the code looks like:
-
-```python
 import numpy as np
 import json
 from typing import Optional
-from agents.components import MLLM, SpeechToText, TextToSpeech, LLM, Vision, MapEncoding, SemanticRouter
-from agents.config import SpeechToTextConfig, TextToSpeechConfig
+from agents.components import (
+    MLLM,
+    SpeechToText,
+    TextToSpeech,
+    LLM,
+    Vision,
+    MapEncoding,
+    SemanticRouter,
+)
+from agents.config import TextToSpeechConfig
 from agents.clients.roboml import HTTPModelClient, RESPModelClient, HTTPDBClient
 from agents.clients.ollama import OllamaClient
 from agents.models import Whisper, SpeechT5, Llava, Llama3_1, VisionModel
@@ -21,8 +24,9 @@ whisper = Whisper(name="whisper")
 whisper_client = HTTPModelClient(whisper)
 speecht5 = SpeechT5(name="speecht5")
 speecht5_client = HTTPModelClient(speecht5)
-object_detection_model = VisionModel(name="dino_4scale",
-                               checkpoint="dino-4scale_r50_8xb2-12e_coco")
+object_detection_model = VisionModel(
+    name="dino_4scale", checkpoint="dino-4scale_r50_8xb2-12e_coco"
+)
 detection_client = RESPModelClient(object_detection_model)
 llava = Llava(name="llava")
 llava_client = OllamaClient(llava)
@@ -41,8 +45,7 @@ speech_to_text = SpeechToText(
     outputs=[query_topic],
     model_client=whisper_client,
     trigger=audio_in,
-    config=SpeechToTextConfig(enable_vad=True),  # option to always listen for speech through the microphone
-    component_name="speech_to_text"
+    component_name="speech_to_text",
 )
 
 # Setup a text to speech component
@@ -80,7 +83,7 @@ mllm = MLLM(
     outputs=[query_answer],
     model_client=llava_client,
     trigger=mllm_query,
-    component_name="visual_q_and_a"
+    component_name="visual_q_and_a",
 )
 
 mllm.set_component_prompt(
@@ -91,8 +94,10 @@ mllm.set_component_prompt(
 
 # Define a fixed input mllm component that does introspection
 introspection_query = FixedInput(
-    name="introspection_query", msg_type="String",
-    fixed="What kind of a room is this? Is it an office, a bedroom or a kitchen? Give a one word answer, out of the given choices")
+    name="introspection_query",
+    msg_type="String",
+    fixed="What kind of a room is this? Is it an office, a bedroom or a kitchen? Give a one word answer, out of the given choices",
+)
 introspection_answer = Topic(name="introspection_answer", msg_type="String")
 
 introspector = MLLM(
@@ -114,7 +119,11 @@ introspector.add_publisher_preprocessor(introspection_answer, introspection_vali
 
 # Define a semantic map using MapEncoding component
 layer1 = MapLayer(subscribes_to=detections_topic, temporal_change=True)
-layer2 = MapLayer(subscribes_to=introspection_answer, resolution_multiple=3)
+layer2 = MapLayer(
+    subscribes_to=introspection_answer,
+    resolution_multiple=3,
+    pre_defined=[(np.array([1.1, 2.1, 3.2]), "The door is here. DOOR.")],
+)
 
 position = Topic(name="odom", msg_type="Odometry")
 map_topic = Topic(name="map", msg_type="OccupancyGrid")
@@ -127,7 +136,7 @@ map = MapEncoding(
     config=map_conf,
     db_client=chroma_client,
     trigger=15.0,
-    component_name="map_encoder"
+    component_name="map_encoder",
 )
 
 # Define a generic LLM component
@@ -138,7 +147,7 @@ llm = LLM(
     outputs=[query_answer],
     model_client=llama_client,
     trigger=[llm_query],
-    component_name="general_q_and_a"
+    component_name="general_q_and_a",
 )
 
 # Define a Go-to-X component using LLM
@@ -178,11 +187,13 @@ def llm_answer_to_goal_point(output: str) -> Optional[np.ndarray]:
     # if there is an error, return None, i.e. no output would be published to goal_point
     try:
         json_dict = json.loads(json_string)
-        coordinates = np.fromstring(json_dict["position"], sep=',', dtype=np.float64)
-        print('Coordinates Extracted:', coordinates)
+        coordinates = np.fromstring(json_dict["position"], sep=",", dtype=np.float64)
+        print("Coordinates Extracted:", coordinates)
         if coordinates.shape[0] < 2 or coordinates.shape[0] > 3:
             return
-        elif coordinates.shape[0] == 2:  # sometimes LLMs avoid adding the zeros of z-dimension
+        elif (
+            coordinates.shape[0] == 2
+        ):  # sometimes LLMs avoid adding the zeros of z-dimension
             coordinates = np.append(coordinates, 0)
         return coordinates
     except Exception:
@@ -192,18 +203,40 @@ def llm_answer_to_goal_point(output: str) -> Optional[np.ndarray]:
 goto.add_publisher_preprocessor(goal_point, llm_answer_to_goal_point)
 
 # Define a semantic router between a generic LLM component, VQA MLLM component and Go-to-X component
-goto_route = Route(routes_to=goto_query,
-    samples=["Go to the door", "Go to the kitchen",
-        "Get me a glass", "Fetch a ball", "Go to hallway"])
+goto_route = Route(
+    routes_to=goto_query,
+    samples=[
+        "Go to the door",
+        "Go to the kitchen",
+        "Get me a glass",
+        "Fetch a ball",
+        "Go to hallway",
+    ],
+)
 
-llm_route = Route(routes_to=llm_query,
-    samples=["What is the capital of France?", "Is there life on Mars?",
-        "How many tablespoons in a cup?", "How are you today?", "Whats up?"])
+llm_route = Route(
+    routes_to=llm_query,
+    samples=[
+        "What is the capital of France?",
+        "Is there life on Mars?",
+        "How many tablespoons in a cup?",
+        "How are you today?",
+        "Whats up?",
+    ],
+)
 
-mllm_route = Route(routes_to=mllm_query,
-    samples=["Are we indoors or outdoors", "What do you see?", "Whats in front of you?",
-        "Where are we", "Do you see any people?", "How many things are infront of you?",
-        "Is this room occupied?"])
+mllm_route = Route(
+    routes_to=mllm_query,
+    samples=[
+        "Are we indoors or outdoors",
+        "What do you see?",
+        "Whats in front of you?",
+        "Where are we",
+        "Do you see any people?",
+        "How many things are infront of you?",
+        "Is this room occupied?",
+    ],
+)
 
 router_config = SemanticRouterConfig(router_name="go-to-router", distance_func="l2")
 # Initialize the router component
@@ -213,7 +246,7 @@ router = SemanticRouter(
     default_route=llm_route,
     config=router_config,
     db_client=chroma_client,
-    component_name='router'
+    component_name="router",
 )
 
 # Launch the components
@@ -228,23 +261,11 @@ launcher.add_pkg(
         router,
         speech_to_text,
         text_to_speech,
-        vision
-    ]
+        vision,
+    ],
+    package_name="agents",
+    multiprocessing=True,
 )
+launcher.on_fail(action_name="restart")
+launcher.fallback_rate = 1 / 10  # 0.1 Hz or 10 seconds
 launcher.bringup()
-```
-```{note}
-Note how we use the same model for _general_q_and_a_ and _goto_to_x_ components. Similarly _visual_q_and_a_ and _introspector_ components share a multimodal LLM model.
-```
-
-In this small code block above, we have setup a fairly sophisticated embodied agent with the following capabilities.
-
-- A conversational interface using speech-to-text and text-to-speech models that uses the robots microphone and playback speaker.
-- The ability to answer contextual queries based on the robots camera, using an MLLM model.
-- The ability to answer generic queries, using an LLM model.
-- A semantic map of the robots observations, that acts as a spatio-temporal memory.
-- The ability to respond to Go-to-X commands utilizing the semantic map.
-- A single input interface that routes the input to different models based on its content.
-
-We can visualize the complete graph in the following diagram:
-![CompleteGraph](../_static/complete_with_legend.png)

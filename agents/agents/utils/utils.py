@@ -6,19 +6,27 @@ from enum import Enum
 from io import BytesIO
 from pathlib import Path
 from types import GenericAlias, UnionType
-from typing import Optional, Union, _UnionGenericAlias, get_args, get_origin
+from typing import (
+    List,
+    Dict,
+    Optional,
+    Union,
+    _UnionGenericAlias,
+    get_args,
+    get_origin,
+    _GenericAlias,
+)
 
 import cv2
 import numpy as np
 from attrs import Attribute
-from jinja2 import Environment, FileSystemLoader, TemplateSyntaxError
+from jinja2 import Environment, FileSystemLoader
 from jinja2.environment import Template
 from PIL import Image
-from rclpy.logging import get_logger
 from .pluralize import pluralize
 
 
-def create_detection_context(obj_list: Optional[list]) -> str:
+def create_detection_context(obj_list: Optional[List]) -> str:
     """
     Creates a context prompt based on detections.
     :param      detections:  The detections
@@ -53,25 +61,22 @@ def get_prompt_template(template: Union[str, Path]) -> Template:
                 loader=FileSystemLoader(Path(template).parent), autoescape=True
             )
             return env.get_template(Path(template).name)
-        except TemplateSyntaxError:
-            get_logger("leibniz").error("Incorrectly specified jinja2 template")
-            raise
         except Exception as e:
-            get_logger("leibniz").error(
+            raise Exception(
                 f"Exception occured while reading template from file: {e}"
-            )
-            raise
+            ) from e
     else:
         # read from string
         try:
             env = Environment()
             return env.from_string(format(template))
-        except TemplateSyntaxError:
-            get_logger("leibniz").error("Incorrectly specified jinja2 template")
-            raise
+        except Exception as e:
+            raise Exception(
+                f"Exception occured while reading template from string: {e}"
+            ) from e
 
 
-def validate_kwargs(_, attribute: Attribute, value: dict):
+def validate_kwargs(_, attribute: Attribute, value: Dict):
     """Validate kwargs
     :param attribute:
     :type attribute: Attribute
@@ -114,13 +119,14 @@ def _check_type_from_signature(value, fn_param: inspect.Parameter) -> None:
 
     # Handles only the origin of GenericAlias (dict, list)
     _annotated_types = [
-        get_origin(t) if isinstance(t, GenericAlias) else t for t in _annotated_types
+        get_origin(t) if isinstance(t, (GenericAlias, _GenericAlias)) else t
+        for t in _annotated_types
     ]
 
     type_check = any(isinstance(value, t) for t in _annotated_types)
     if not type_check:
         raise TypeError(
-            f"Invalid type encountered for {fn_param.name}. Should be of type(s) {fn_param.annotation}"
+            f"Invalid type encountered for {fn_param.name}. Should be of type(s) {fn_param.annotation}. Passed value might be of type {type(value)}"
         )
 
 

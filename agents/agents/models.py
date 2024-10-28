@@ -2,7 +2,7 @@
 The following model specification classes are meant to define a comman interface for initialization parameters for ML models across supported model serving platforms.
 """
 
-from typing import Optional
+from typing import Optional, Dict
 
 from attrs import define, field
 from .ros import BaseAttrs, base_validators
@@ -24,7 +24,8 @@ __all__ = [
 # ollama models map to model:latest tag
 _ollama_mapping = [
     "llava",
-    "llama3" "llama3_1",
+    "llama3",
+    "llama3_1",
     "phi3",
     "qwen2",
     "aya",
@@ -42,7 +43,7 @@ class Model(BaseAttrs):
     checkpoint: str
     init_timeout: Optional[int] = field(default=None)
 
-    def _get_init_params(self) -> dict:
+    def _get_init_params(self) -> Dict:
         """Get init params for model initialization."""
         return {"checkpoint": self.checkpoint}
 
@@ -92,7 +93,7 @@ class LLM(Model):
             )
         self.checkpoint = f"{self.__class__.__name__.lower().replace('_', '.')}"
 
-    def _get_init_params(self) -> dict:
+    def _get_init_params(self) -> Dict:
         """Get init params for model initialization."""
         return {
             "checkpoint": self.checkpoint,
@@ -317,7 +318,7 @@ class Whisper(Model):
         default="4bit", validator=base_validators.in_(["4bit", "8bit", None])
     )
 
-    def get_init_params(self) -> dict:
+    def get_init_params(self) -> Dict:
         """Get init params for model initialization."""
         return {"checkpoint": self.checkpoint, "quantization": self.quantization}
 
@@ -354,7 +355,7 @@ class SpeechT5(Model):
         ]),
     )
 
-    def _get_init_params(self) -> dict:
+    def _get_init_params(self) -> Dict:
         """Get init params for model initialization."""
         return {"checkpoint": self.checkpoint, "voice": self.voice}
 
@@ -382,7 +383,7 @@ class Bark(Model):
     attn_implementation: Optional[str] = field(default="flash_attention_2")
     voice: str = field(default="v2/en_speaker_6")
 
-    def get_init_params(self) -> dict:
+    def get_init_params(self) -> Dict:
         """Get init params for model initialization."""
         return {
             "checkpoint": self.checkpoint,
@@ -429,7 +430,7 @@ class VisionModel(Model):
     )
     _num_trackers: int = field(default=1, validator=base_validators.gt(0))
 
-    def _get_init_params(self) -> dict:
+    def _get_init_params(self) -> Dict:
         """Get init params for model initialization."""
         return {
             "checkpoint": self.checkpoint,

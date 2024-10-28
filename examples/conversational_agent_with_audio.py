@@ -50,6 +50,5 @@ text_to_speech = TextToSpeech(
 launcher = Launcher()
 launcher.add_pkg(
     components=[speech_to_text, mllm, text_to_speech],
-    activate_all_components_on_start=True,
 )
 launcher.bringup()

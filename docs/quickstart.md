@@ -31,8 +31,7 @@ mllm.set_topic_prompt(text0, template="""You are an amazing and funny robot.
 )
 # Launch the component
 launcher = Launcher()
-launcher.add_pkg(components=[mllm],
-                 activate_all_components_on_start=True)
+launcher.add_pkg(components=[mllm])
 launcher.bringup()
 ```
 
@@ -96,8 +95,7 @@ Note how the MLLM type of component, also allows us to set a topic or component 
 ```python
 # Launch the component
 launcher = Launcher()
-launcher.add_pkg(components=[mllm],
-                 activate_all_components_on_start=True)
+launcher.add_pkg(components=[mllm])
 launcher.bringup()
 ```
 

@@ -98,8 +98,8 @@ from agents.ros import Launcher
 # Launch the components
 launcher = Launcher()
 launcher.add_pkg(
-    components=[vision, mllm],
-    activate_all_components_on_start=True)
+    components=[vision, mllm]
+    )
 launcher.bringup()
 ```
 
@@ -151,7 +151,7 @@ mllm.set_component_prompt(
 )
 launcher = Launcher()
 launcher.add_pkg(
-    components=[vision, mllm],
-    activate_all_components_on_start=True)
+    components=[vision, mllm]
+    )
 launcher.bringup()
 ```

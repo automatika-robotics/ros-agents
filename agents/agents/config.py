@@ -1,8 +1,21 @@
-from typing import Optional, Union
+from typing import Optional, Union, Dict, List
+from pathlib import Path
 
-from attrs import define, field
-from .ros import base_validators, BaseComponentConfig
+from attrs import define, field, Factory
+
+from .ros import base_validators, BaseComponentConfig, Topic, Route
 from .utils import validate_kwargs
+
+__all__ = [
+    "LLMConfig",
+    "MLLMConfig",
+    "SpeechToTextConfig",
+    "TextToSpeechConfig",
+    "SemanticRouterConfig",
+    "MapConfig",
+    "VideoMessageMakerConfig",
+    "VisionConfig",
+]
 
 
 @define(kw_only=True)
@@ -53,8 +66,14 @@ class LLMConfig(BaseComponentConfig):
     history_size: int = 10  # number of user messages
     temperature: float = field(default=0.8, validator=base_validators.gt(0.0))
     max_new_tokens: int = field(default=100, validator=base_validators.gt(0))
+    _component_prompt: Optional[Union[str, Path]] = field(
+        default=None, alias="_component_prompt"
+    )
+    _topic_prompts: Dict[str, Union[str, Path]] = field(
+        default=Factory(dict), alias="_topic_prompts"
+    )
 
-    def _get_inference_params(self) -> dict:
+    def _get_inference_params(self) -> Dict:
         """get_inference_params.
         :rtype: dict
         """
@@ -122,9 +141,9 @@ class VisionConfig(BaseComponentConfig):
         default=0.5, validator=base_validators.in_range(min_value=0.1, max_value=1.0)
     )
     get_data_labels: bool = field(default=True)
-    labels_to_track: Optional[list[str]] = field(default=None)
+    labels_to_track: Optional[List[str]] = field(default=None)
 
-    def _get_inference_params(self) -> dict:
+    def _get_inference_params(self) -> Dict:
         """get_inference_params.
         :rtype: dict
         """
@@ -164,7 +183,7 @@ class TextToSpeechConfig(BaseComponentConfig):
     block_size: int = field(default=1024)
     get_bytes: bool = field(default=False)
 
-    def _get_inference_params(self) -> dict:
+    def _get_inference_params(self) -> Dict:
         """get_inference_params.
         :rtype: dict
         """
@@ -222,11 +241,19 @@ class SpeechToTextConfig(BaseComponentConfig):
     def __attrs_post_init__(self):
         self.block_size = 512 if self.sample_rate == 16000 else 256
 
-    def _get_inference_params(self) -> dict:
+    def _get_inference_params(self) -> Dict:
         """get_inference_params.
         :rtype: dict
         """
         return {}
+
+
+def _get_optional_topic(topic: Union[Topic, Dict]) -> Optional[Topic]:
+    if not topic:
+        return
+    if isinstance(topic, Topic):
+        return topic
+    return Topic(**topic)
 
 
 @define(kw_only=True)
@@ -248,6 +275,20 @@ class MapConfig(BaseComponentConfig):
     distance_func: str = field(
         default="l2", validator=base_validators.in_(["l2", "ip", "cosine"])
     )
+    _position: Optional[Union[Topic, Dict]] = field(
+        default=None, converter=_get_optional_topic, alias="_position"
+    )
+    _map_topic: Optional[Union[Topic, Dict]] = field(
+        default=None, converter=_get_optional_topic, alias="_map_topic"
+    )
+
+
+def _get_optional_route(route: Union[Route, Dict]) -> Optional[Route]:
+    if not route:
+        return
+    if isinstance(route, Route):
+        return route
+    return Route(**route)
 
 
 @define(kw_only=True)
@@ -275,6 +316,9 @@ class SemanticRouterConfig(BaseComponentConfig):
     )
     maximum_distance: float = field(
         default=0.4, validator=base_validators.in_range(min_value=0.1, max_value=1.0)
+    )
+    _default_route: Optional[Union[Route, Dict]] = field(
+        default=None, converter=_get_optional_route, alias="_default_route"
     )
 
 
@@ -309,7 +353,7 @@ class VideoMessageMakerConfig(BaseComponentConfig):
     threshold: float = field(
         default=0.3, validator=base_validators.in_range(min_value=0.1, max_value=5.0)
     )
-    flow_kwargs: dict = field(
+    flow_kwargs: Dict = field(
         default={
             "pyr_scale": 0.5,
             "levels": 3,

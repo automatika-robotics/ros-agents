@@ -1,4 +1,5 @@
-from typing import Optional
+from typing import Optional, List, Union
+import json
 
 from ..clients.db_base import DBClient
 from ..config import SemanticRouterConfig
@@ -76,11 +77,11 @@ class SemanticRouter(Component):
     def __init__(
         self,
         *,
-        inputs: list[Topic],
-        routes: list[Route],
-        default_route: Optional[Route] = None,
+        inputs: List[Topic],
+        routes: List[Route],
         config: SemanticRouterConfig,
         db_client: DBClient,
+        default_route: Optional[Route] = None,
         callback_group=None,
         component_name: str = "router_component",
         **kwargs,
@@ -93,7 +94,7 @@ class SemanticRouter(Component):
         super().__init__(
             inputs,
             None,
-            config,
+            self.config,
             inputs,
             callback_group,
             component_name,
@@ -106,7 +107,7 @@ class SemanticRouter(Component):
         if default_route:
             if default_route.routes_to.name not in self.routes_dict:
                 raise TypeError("default_route must be one of the specified routes")
-        self.default_route = default_route
+            self.default_route = self.config._default_route = default_route
 
     def activate(self):
         self.get_logger().debug(f"Current Status: {self.health_status.value}")
@@ -178,13 +179,51 @@ class SemanticRouter(Component):
             if self.publishers_dict:
                 self.publishers_dict[route].publish(trigger_query)
 
-    def _routes(self, routes: list[Route]):
+    def _routes(self, routes: List[Route]):
         """
         Set component Routes (topics)
         """
         self.routes_dict = {route.routes_to.name: route for route in routes}
-        route_topics = [route.routes_to for route in routes]
+        route_topics: List[Topic] = [route.routes_to for route in routes]  # type: ignore
         self.validate_topics(route_topics, self.allowed_outputs, "Outputs")
         self.publishers_dict = {
             route_topic.name: Publisher(route_topic) for route_topic in route_topics
         }
+
+    def _update_cmd_args_list(self):
+        """
+        Update launch command arguments
+        """
+        super()._update_cmd_args_list()
+
+        self.launch_cmd_args = [
+            "--routes",
+            self._get_routes_json(),
+        ]
+
+        self.launch_cmd_args = [
+            "--db_client",
+            self._get_db_client_json(),
+        ]
+
+    def _get_routes_json(self) -> Union[str, bytes, bytearray]:
+        """
+        Serialize component routes to json
+
+        :return: Serialized inputs
+        :rtype:  str | bytes | bytearray
+        """
+        if not hasattr(self, "routes_dict"):
+            return "[]"
+        return json.dumps([route.to_json() for route in self.routes_dict.values()])
+
+    def _get_db_client_json(self) -> Union[str, bytes, bytearray]:
+        """
+        Serialize component routes to json
+
+        :return: Serialized inputs
+        :rtype:  str | bytes | bytearray
+        """
+        if not self.db_client:
+            return ""
+        return json.dumps(self.db_client.serialize())

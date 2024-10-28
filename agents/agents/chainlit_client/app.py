@@ -1,5 +1,5 @@
 from io import BytesIO
-from typing import Union, Optional
+from typing import Union, Optional, List
 from enum import Enum
 
 import chainlit as cl
@@ -257,7 +257,7 @@ async def on_audio_chunk(chunk: cl.AudioChunk):
 
 
 @cl.on_audio_end
-async def on_audio_end(elements: list[ElementBased]):
+async def on_audio_end(elements: List[ElementBased]):
     """Publish audio to the topic.
     :param elements:
     :type elements: list[ElementBased]

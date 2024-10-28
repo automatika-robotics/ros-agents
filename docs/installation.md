@@ -29,7 +29,7 @@ cd agents_ws/src
 
 Install python dependencies
 ```shell
-pip install pillow numpy opencv-python-headless 'attrs>=23.2.0' jinja2 httpx
+pip install pillow numpy opencv-python-headless 'attrs>=23.2.0' jinja2 httpx setproctitle msgpack msgpack-numpy numpy-quaternion
 ```
 
 Download ROS Sugar.

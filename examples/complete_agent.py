@@ -10,7 +10,7 @@ from agents.components import (
     MapEncoding,
     SemanticRouter,
 )
-from agents.config import SpeechToTextConfig, TextToSpeechConfig
+from agents.config import TextToSpeechConfig
 from agents.clients.roboml import HTTPModelClient, RESPModelClient, HTTPDBClient
 from agents.clients.ollama import OllamaClient
 from agents.models import Whisper, SpeechT5, Llava, Llama3_1, VisionModel
@@ -45,9 +45,6 @@ speech_to_text = SpeechToText(
     outputs=[query_topic],
     model_client=whisper_client,
     trigger=audio_in,
-    config=SpeechToTextConfig(
-        enable_vad=True
-    ),  # option to always listen for speech through the microphone
     component_name="speech_to_text",
 )
 
@@ -151,7 +148,6 @@ llm = LLM(
 
 # Define a Go-to-X component using LLM
 goto_query = Topic(name="goto_query", msg_type="String")
-goto_answer = Topic(name="goto_answer", msg_type="String")
 goal_point = Topic(name="goal_point", msg_type="PoseStamped")
 
 goto_config = LLMConfig(
@@ -164,7 +160,7 @@ goto_config = LLMConfig(
 
 goto = LLM(
     inputs=[goto_query],
-    outputs=[goto_answer, goal_point],
+    outputs=[goal_point],
     model_client=llama_client,
     config=goto_config,
     db_client=chroma_client,
@@ -262,9 +258,6 @@ launcher.add_pkg(
         speech_to_text,
         text_to_speech,
         vision,
-    ],
-    activate_all_components_on_start=True,
+    ]
 )
-launcher.on_fail(action_name="restart")
-launcher.fallback_rate = 1 / 10  # 0.1 Hz or 10 seconds
-launcher.bringup(ros_log_level="debug")
+launcher.bringup()

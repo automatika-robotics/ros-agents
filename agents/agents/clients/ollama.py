@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, Optional, Dict
 
 import httpx
 
@@ -20,9 +20,10 @@ class OllamaClient(ModelClient):
         inference_timeout: int = 30,
         init_on_activation: bool = True,
         logging_level: str = "info",
+        **kwargs,
     ):
-        self.model: LLM = model
-        self.model._set_ollama_checkpoint()
+        if isinstance(model, LLM):
+            model._set_ollama_checkpoint()
         try:
             from ollama import Client
 
@@ -38,6 +39,7 @@ class OllamaClient(ModelClient):
             inference_timeout=inference_timeout,
             init_on_activation=init_on_activation,
             logging_level=logging_level,
+            **kwargs,
         )
         self._check_connection()
 
@@ -55,32 +57,36 @@ class OllamaClient(ModelClient):
         """
         Initialize the model on platform using the paramters provided in the model specification class
         """
-        self.logger.info(f"Initializing {self.model.name} on ollama")
+        self.logger.info(f"Initializing {self.model_name} on ollama")
         try:
             # set timeout on underlying httpx client
             self.client._client.timeout = self.init_timeout
-            r = self.client.pull(self.model.checkpoint)
+            r = self.client.pull(self.model_init_params["checkpoint"])
             if r.get("status") != "success":  # type: ignore
-                raise Exception(f"Could not pull model {self.model.checkpoint}")
-            if hasattr(self.model, "system_prompt") and (
-                sys_prompt := self.model.system_prompt  # type: ignore
-            ):
+                raise Exception(
+                    f"Could not pull model {self.model_init_params['checkpoint']}"
+                )
+            if sys_prompt := self.model_init_params.get("system_prompt"):
                 # create modelfile if a system prompt is given
-                modelfile = f'''FROM {self.model.checkpoint}
+                modelfile = f'''FROM {self.model_init_params["checkpoint"]}
     SYSTEM """
     {sys_prompt}
     """
     '''
-                self.client.create(self.model.checkpoint, modelfile=modelfile)
+                self.client.create(
+                    self.model_init_params["checkpoint"], modelfile=modelfile
+                )
 
             # load model in memory with empty request
-            self.client.generate(model=self.model.checkpoint, keep_alive=10)
-            self.logger.info(f"{self.model.name} model initialized")
+            self.client.generate(
+                model=self.model_init_params["checkpoint"], keep_alive=10
+            )
+            self.logger.info(f"{self.model_name} model initialized")
         except Exception as e:
             self.logger.error(str(e))
             return None
 
-    def _inference(self, inference_input: dict[str, Any]) -> Optional[dict]:
+    def _inference(self, inference_input: Dict[str, Any]) -> Optional[Dict]:
         """Call inference on the model using data and inference parameters from the component"""
         if not (query := inference_input.get("query")):
             raise TypeError(
@@ -88,7 +94,7 @@ class OllamaClient(ModelClient):
             )
         # create input
         input = {
-            "model": self.model.checkpoint,
+            "model": self.model_init_params["checkpoint"],
             "messages": query,
         }
         inference_input.pop("query")
@@ -136,9 +142,11 @@ class OllamaClient(ModelClient):
     def _deinitialize(self):
         """Deinitialize the model on the platform"""
 
-        self.logger.error(f"Deinitializing {self.model.name} model on ollama")
+        self.logger.error(f"Deinitializing {self.model_name} model on ollama")
         try:
-            self.client.generate(model=self.model.checkpoint, keep_alive=0)
+            self.client.generate(
+                model=self.model_init_params["checkpoint"], keep_alive=0
+            )
         except Exception as e:
             self.logger.error(str(e))
             return None

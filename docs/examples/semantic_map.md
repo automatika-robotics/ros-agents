@@ -163,8 +163,8 @@ from agents.ros import Launcher
 # Launch the components
 launcher = Launcher()
 launcher.add_pkg(
-    components=[vision, introspector, map],
-    activate_all_components_on_start=True)
+    components=[vision, introspector, map]
+    )
 launcher.bringup()
 ```
 
@@ -263,7 +263,7 @@ map = MapEncoding(
 # Launch the components
 launcher = Launcher()
 launcher.add_pkg(
-    components=[vision, introspector, map],
-    activate_all_components_on_start=True)
+    components=[vision, introspector, map]
+    )
 launcher.bringup()
 ```

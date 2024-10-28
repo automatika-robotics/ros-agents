@@ -54,6 +54,7 @@ goto = LLM(
     model_client=llama_client,
     db_client=chroma_client,  # check the previous example where we setup this database client
     trigger=goto_in,
+    config=config,
     component_name='go_to_x'
 )
 ```
@@ -114,8 +115,8 @@ from agents.ros import Launcher
 # Launch the component
 launcher = Launcher()
 launcher.add_pkg(
-    components=[goto],
-    activate_all_components_on_start=True)
+    components=[goto]
+    )
 launcher.bringup()
 ```
 
@@ -160,6 +161,7 @@ goto = LLM(
     model_client=llama_client,
     db_client=chroma_client,  # check the previous example where we setup this database client
     trigger=goto_in,
+    config=config,
     component_name='go_to_x'
 )
 
@@ -196,7 +198,7 @@ goto.add_publisher_preprocessor(goal_point, llm_answer_to_goal_point)
 # Launch the component
 launcher = Launcher()
 launcher.add_pkg(
-    components=[goto],
-    activate_all_components_on_start=True)
+    components=[goto]
+    )
 launcher.bringup()
 ```

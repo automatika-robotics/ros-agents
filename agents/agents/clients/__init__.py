@@ -22,11 +22,11 @@ Some clients might need additional dependacies, which are provided in the follow
 
 * - **RoboML**
   - [RESPModelClient](agents.clients.roboml.RESPModelClient)
-  - A Redis Serialization Protocol (RESP) based client for interaction with ML models served on RoboML. **Note:** In order to use this client, please install dependancies with `pip install redis[hiredis] msgpack msgpack_numpy`
+  - A Redis Serialization Protocol (RESP) based client for interaction with ML models served on RoboML. **Note:** In order to use this client, please install dependancies with `pip install redis[hiredis] msgpack msgpack-numpy`
 
 * - **RoboML**
   - [RESPDBClient](agents.clients.roboml.RESPDBClient)
-  - A Redis Serialization Protocol (RESP) based client for interaction with vector DBs served on RoboML. **Note:** In order to use this client, please install dependancies with `pip install redis[hiredis] msgpack msgpack_numpy`
+  - A Redis Serialization Protocol (RESP) based client for interaction with vector DBs served on RoboML. **Note:** In order to use this client, please install dependancies with `pip install redis[hiredis] msgpack msgpack-numpy`
 
 * - **Ollama**
   - [OllamaClient](agents.clients.ollama.OllamaClient)

@@ -11,9 +11,6 @@ ROS Agents is a fully-loaded framework for creating interactive embodied agents 
 - **Semantic Memory**: Integrates vector databases, semantic routing and other supporting components to quickly build arbitrarily complex graphs for agentic information flow. No need to utilize bloated "GenAI" frameworks on your robot.
 - **Made in ROS2**: Utilizes ROS2 as the underlying middleware. Theoretically, all devices that provide a ROS2 package can be utilized to send data to ML models, as long as the datatype callback has been implemented.
 
-> [!NOTE]
-> This is an alpha release of ROS Agents. Breaking changes are to be expected.
-
 Checkout [Installation Instructions](https://automatika-robotics.github.io/ros-agents/installation.html) 🛠️
 
 Get started with the [Quickstart Guide](https://automatika-robotics.github.io/ros-agents/quickstart.html) 🚀
@@ -45,14 +42,13 @@ The core of ROS Agents is agnostic to model serving platforms. It currently supp
 Install python dependencies
 
 ```shell
-pip install -U pillow numpy opencv-python-headless hiredis msgpack msgpack_numpy 'attrs>=23.2.0'`
+pip install pillow numpy opencv-python-headless 'attrs>=23.2.0' jinja2 httpx setproctitle msgpack msgpack-numpy numpy-quaternion
 ```
 
-Download ROS Sugar and Automatika ROS (common utils) packages.
+Download ROS Sugar
 
 ```shell
 git clone https://github.com/automatika-robotics/ros-sugar
-git clone https://github.com/automatika-robotics/automatika-ros
 ```
 
 #### Install ROS Agents
@@ -98,8 +94,7 @@ mllm.set_topic_prompt(text0, template="""You are an amazing and funny robot.
 )
 # Launch the component
 launcher = Launcher()
-launcher.add_pkg(components=[mllm],
-                 activate_all_components_on_start=True)
+launcher.add_pkg(components=[mllm])
 launcher.bringup()
 ```
 
