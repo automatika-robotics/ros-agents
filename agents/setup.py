@@ -6,7 +6,7 @@ console_scripts = [
     "tiny_web_client = agents.chainlit_client.app:main",
 ]
 
-version = "0.2.0"
+version = "0.3.0"
 
 
 setup(
