@@ -6,10 +6,12 @@ console_scripts = [
     "tiny_web_client = agents.chainlit_client.app:main",
 ]
 
+version = "0.2.0"
+
 
 setup(
     name=package_name,
-    version="0.2.0",
+    version=version,
     packages=find_packages(exclude=["tests"]),
     data_files=[
         ("share/ament_index/resource_index/packages", ["resource/" + package_name]),
