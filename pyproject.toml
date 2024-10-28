@@ -52,7 +52,7 @@ push = true
 
 [tool.bumpver.file_patterns]
 "agents/setup.py" = [
-    'current_version = "{version}"',
+    'version = "{version}"',
 ]
 "agents/package.xml" = [
     "<version>{version}</version>",
