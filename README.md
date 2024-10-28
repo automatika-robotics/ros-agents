@@ -11,9 +11,6 @@ ROS Agents is a fully-loaded framework for creating interactive embodied agents 
 - **Semantic Memory**: Integrates vector databases, semantic routing and other supporting components to quickly build arbitrarily complex graphs for agentic information flow. No need to utilize bloated "GenAI" frameworks on your robot.
 - **Made in ROS2**: Utilizes ROS2 as the underlying middleware. Theoretically, all devices that provide a ROS2 package can be utilized to send data to ML models, as long as the datatype callback has been implemented.
 
-> [!NOTE]
-> This is an alpha release of ROS Agents. Breaking changes are to be expected.
-
 Checkout [Installation Instructions](https://automatika-robotics.github.io/ros-agents/installation.html) 🛠️
 
 Get started with the [Quickstart Guide](https://automatika-robotics.github.io/ros-agents/quickstart.html) 🚀

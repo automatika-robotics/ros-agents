@@ -231,9 +231,7 @@ launcher.add_pkg(
         vision
     ]
 )
-launcher.on_fail(action_name="restart")
-launcher.fallback_rate = 1 / 10  # 0.1 Hz or 10 seconds
-launcher.bringup(ros_log_level="debug")
+launcher.bringup()
 ```
 ```{note}
 Note how we use the same model for _general_q_and_a_ and _goto_to_x_ components. Similarly _visual_q_and_a_ and _introspector_ components share a multimodal LLM model.
