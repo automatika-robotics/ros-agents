@@ -12,4 +12,5 @@ goto
 tool_calling
 semantic_router
 complete
+multiprocessing
 ```
