@@ -25,7 +25,7 @@ To see a list of models that work for tool calling using the OllamaClient, check
 # pre-process the output before publishing to a topic of msg_type PoseStamped
 def get_coordinates(position: list[float]) -> np.ndarray:
     """Get position coordinates"""
-    return np.array(position)
+    return np.array(position, dtype=float)
 
 
 function_description = {
@@ -109,6 +109,7 @@ goto = LLM(
     model_client=llama_client,
     db_client=chroma_client,  # check the previous example where we setup this database client
     trigger=goto_in,
+    config=config,
     component_name="go_to_x",
 )
 
@@ -121,7 +122,7 @@ goto.set_component_prompt(
 # pre-process the output before publishing to a topic of msg_type PoseStamped
 def get_coordinates(position: list[float]) -> np.ndarray:
     """Get position coordinates"""
-    return np.array(position)
+    return np.array(position, dtype=float)
 
 
 function_description = {

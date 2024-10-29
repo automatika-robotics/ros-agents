@@ -1,4 +1,4 @@
-from typing import Any, Optional, Dict
+from typing import Any, Optional, Dict, Union
 
 import httpx
 
@@ -14,7 +14,7 @@ class OllamaClient(ModelClient):
 
     def __init__(
         self,
-        model: LLM,
+        model: Union[LLM, Dict],
         host: str = "127.0.0.1",
         port: int = 11434,
         inference_timeout: int = 30,

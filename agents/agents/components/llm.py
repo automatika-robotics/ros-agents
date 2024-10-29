@@ -1,17 +1,21 @@
 import json
 from pathlib import Path
 from typing import Any, Optional, Union, Callable, List, Dict
-
-from agents.clients.roboml import OllamaModel
+import msgpack
+import msgpack_numpy as m_pack
 
 from ..callbacks import TextCallback
 from ..clients.db_base import DBClient
 from ..clients.model_base import ModelClient
+from ..clients import OllamaClient
 from ..config import LLMConfig
 from ..ros import FixedInput, String, Topic, Detections
 from ..utils import get_prompt_template, validate_func_args
 from .model_component import ModelComponent
 from .component_base import ComponentRunType
+
+# patch msgpack for numpy arrays
+m_pack.patch()
 
 
 class LLM(ModelComponent):
@@ -92,11 +96,6 @@ class LLM(ModelComponent):
             else None
         )
         self.messages: List[Dict] = []
-
-        # tool calling
-        self.tools: Dict[str, Callable] = {}
-        self.tool_descriptions: List[Dict] = []
-        self.tool_response_flags: Dict[str, bool] = {}
 
         super().__init__(
             inputs,
@@ -232,12 +231,30 @@ class LLM(ModelComponent):
 
         # make tool calls
         for tool in result["tool_calls"]:
-            function_to_call = self.tools[tool["function"]["name"]]
+            function_to_call = self._external_processors[tool["function"]["name"]][0][0]
 
             try:
-                function_response = function_to_call(**tool["function"]["arguments"])
+                # HACK: Read function argument as serialized datatypes
+                # if they are returned as string
+                arg_json = {
+                    key: json.loads(str(arg))
+                    for key, arg in tool["function"]["arguments"].items()
+                }
+                if isinstance(function_to_call, Callable):
+                    function_response = function_to_call(**arg_json)
+                else:
+                    payload = msgpack.packb(arg_json)
+                    if payload:
+                        function_to_call.sendall(payload)
+                    else:
+                        raise Exception(
+                            f"Could not serialize the following function arguments for tool calling: {arg_json}"
+                        )
+
+                    result_b = function_to_call.recv(1024)
+                    function_response = msgpack.unpackb(result_b)
             except Exception as e:
-                self.get_logger().error(f"Exception in function calling. {e}")
+                self.get_logger().error(f"Exception in tool calling. {e}")
                 return result
 
             # make last function call output the publishable output
@@ -247,9 +264,11 @@ class LLM(ModelComponent):
             self.messages.append({"role": "tool", "content": function_response})
 
             # check for response flags
-            response_flags.append(self.tool_response_flags[tool["function"]["name"]])
+            response_flags.append(
+                self.config._tool_response_flags[tool["function"]["name"]]
+            )
 
-        # make call to model again if enabled
+        # make call to model again if any tool requires response to be sent back
         if any(response_flags):
             self.get_logger().debug(f"Input from component: {self.messages}")
 
@@ -323,8 +342,8 @@ class LLM(ModelComponent):
         }
 
         # Add any tools, if registered
-        if self.tool_descriptions:
-            input["tools"] = self.tool_descriptions
+        if self.config._tool_descriptions:
+            input["tools"] = self.config._tool_descriptions
 
         return input
 
@@ -359,7 +378,7 @@ class LLM(ModelComponent):
             self.messages.append(result_message)
 
             # handle tool calls
-            if self.tools:
+            if self.config._tool_descriptions:
                 result = self._handle_tool_calls(result)
 
             # raise a fallback trigger via health status
@@ -368,7 +387,7 @@ class LLM(ModelComponent):
                 return
 
             # publish inference result
-            if result["output"] and hasattr(self, "publishers_dict"):
+            if result["output"] is not None and hasattr(self, "publishers_dict"):
                 for publisher in self.publishers_dict.values():
                     publisher.publish(**result)
 
@@ -469,13 +488,18 @@ class LLM(ModelComponent):
         my_component.register_tool(tool=my_arbitrary_function, tool_description=my_func_description, send_tool_response_to_model=False)
         ```
         """
-        if not isinstance(self.model_client, OllamaModel):
+        if not isinstance(self.model_client, OllamaClient):
             raise TypeError(
                 "Currently registering tools is only supported when using an Ollama client with the component."
             )
-        self.tools[tool_description["name"]] = tool
-        self.tool_descriptions.append(tool_description)
-        self.tool_response_flags[tool_description["name"]] = send_tool_response_to_model
+        self._external_processors[tool_description["function"]["name"]] = (
+            [tool],
+            "tool",
+        )
+        self.config._tool_descriptions.append(tool_description)
+        self.config._tool_response_flags[tool_description["function"]["name"]] = (
+            send_tool_response_to_model
+        )
 
     def _update_cmd_args_list(self):
         """

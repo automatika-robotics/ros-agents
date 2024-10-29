@@ -77,10 +77,10 @@ class ModelComponent(Component):
         if hasattr(self, "publishers_dict") and hasattr(self, "handled_outputs"):
             for name, pub in self.publishers_dict.items():
                 if pub.output_topic.msg_type not in self.handled_outputs and (
-                    pub.output_topic.name not in self._external_processors.keys()
+                    not self._external_processors
                 ):
                     func_body = inspect.getsource(pub.output_topic.msg_type.convert)
-                    raise TypeError(f"""{type(self).__name__} components can only handle output topics of type(s) {self.handled_outputs} automatically. {name} is of type {pub.output_topic.msg_type}. Please provide a pre-processing function for this topic and attach it to the topic by calling the `add_publisher_preprocessor` on the component {self.node_name}. Make sure the output of the pre-processor function can be passed as parameter output to the following function:
+                    raise TypeError(f"""{type(self).__name__} components can only handle output topics of type(s) {self.handled_outputs} automatically. Topic {name} is of type {pub.output_topic.msg_type}. EITHER provide a pre-processing function for this topic and attach it to the topic by calling the `add_publisher_preprocessor` on the component {self.node_name} OR provide a tool call that can provide structured inference output and attach it by calling `register_tool` on {self.node_name}. Make sure the output can be passed as parameter `output` to the following function:
 {func_body}""")
 
     @abstractmethod

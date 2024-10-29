@@ -146,7 +146,7 @@ class MLLM(LLM):
         }
 
         # Add any tools, if registered
-        if self.tool_descriptions:
-            input["tools"] = self.tool_descriptions
+        if self.config._tool_descriptions:
+            input["tools"] = self.config._tool_descriptions
 
         return input

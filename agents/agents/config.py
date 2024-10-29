@@ -72,6 +72,12 @@ class LLMConfig(BaseComponentConfig):
     _topic_prompts: Dict[str, Union[str, Path]] = field(
         default=Factory(dict), alias="_topic_prompts"
     )
+    _tool_descriptions: List[Dict] = field(
+        default=Factory(list), alias="_tool_descriptions"
+    )
+    _tool_response_flags: Dict[str, bool] = field(
+        default=Factory(dict), alias="_tool_response_flags"
+    )
 
     def _get_inference_params(self) -> Dict:
         """get_inference_params.

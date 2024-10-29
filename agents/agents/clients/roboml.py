@@ -1,7 +1,7 @@
 import base64
 import time
 from enum import Enum
-from typing import Any, Optional, Dict
+from typing import Any, Optional, Dict, Union
 
 import httpx
 
@@ -35,7 +35,7 @@ class HTTPModelClient(ModelClient):
 
     def __init__(
         self,
-        model: Model,
+        model: Union[Model, Dict],
         host: str = "127.0.0.1",
         port: int = 8000,
         inference_timeout: int = 30,
@@ -171,7 +171,7 @@ class HTTPDBClient(DBClient):
 
     def __init__(
         self,
-        db: DB,
+        db: Union[DB, Dict],
         host: str = "127.0.0.1",
         port: int = 8000,
         response_timeout: int = 30,
@@ -348,7 +348,7 @@ class RESPModelClient(ModelClient):
 
     def __init__(
         self,
-        model: Model,
+        model: Union[Model, Dict],
         host: str = "127.0.0.1",
         port: int = 6379,
         inference_timeout: int = 30,
@@ -519,7 +519,7 @@ class RESPDBClient(DBClient):
 
     def __init__(
         self,
-        db: DB,
+        db: Union[DB, Dict],
         host: str = "127.0.0.1",
         port: int = 6379,
         init_on_activation: bool = True,
