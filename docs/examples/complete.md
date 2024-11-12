@@ -247,4 +247,4 @@ In this small code block above, we have setup a fairly sophisticated embodied ag
 - A single input interface that routes the input to different models based on its content.
 
 We can visualize the complete graph in the following diagram:
-![CompleteGraph](../_static/complete_with_legend.png)
+![CompleteGraph](../_static/complete_light.png)

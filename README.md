@@ -98,7 +98,16 @@ launcher.add_pkg(components=[mllm])
 launcher.bringup()
 ```
 
-And just like that we have an agent that can answer questions like **'What do you see?'**. To interact with this agent, ROS Agents includes a tiny web client. Checkout the complete [Quick Start Guide](https://automatika-robotics.github.io/ros-agents/quickstart.html) for details.
+And just like that we have an agent that can answer questions like **'What do you see?'**. To interact with this agent, ROS Agents includes a tiny web client. Checkout the [Quick Start Guide](https://automatika-robotics.github.io/ros-agents/quickstart.html) to learn more about how components and models work together.
+
+## Elaborate Embodied Agents
+The quickstart example above is just an amuse-bouche of what is possible with ROS Agents. In ROS Agents we can create arbitrarily sophisticated component graphs. And furthermore our system can be configured to even change or reconfigure itself based on events internal or external to the system. Check out the code for the following agent [here].(https://automatika-robotics.github.io/ros-agents/examples/complete.html)
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/_static/complete_dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="docs/_static/complete_light.png">
+  <img alt="Elaborate Agent" src="docs/_static/complete_dark.png">
+</picture>
 
 ## Copyright
 
