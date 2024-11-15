@@ -171,6 +171,17 @@ class Tracking(SupportedType):
                     estimated_velocity.y = obj_instance_v[1]
                     estimated_velocities.append(estimated_velocity)
 
+        boxes = []
+        for bbox in output["bboxes"]:
+            box = Bbox2D()
+            box.top_left_x = bbox[0]
+            box.top_left_y = bbox[1]
+            box.bottom_right_x = bbox[2]
+            box.bottom_right_y = bbox[3]
+            boxes.append(box)
+
+        msg.boxes = boxes
+        msg.scores = output["scores"]
         msg.centroids = centroids
         msg.estimated_velocities = estimated_velocities
         msg.image = Image.convert(img)
