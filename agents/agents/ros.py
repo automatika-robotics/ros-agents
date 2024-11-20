@@ -78,7 +78,7 @@ class Video(SupportedType):
     @classmethod
     def convert(cls, output: Union[List[ROSImage], List[np.ndarray]], **_) -> ROSVideo:
         """
-        Takes an list of images and retunrs a video message (Image Array)
+        Takes an list of images and returns a video message (Image Array)
         :return: Video
         """
         frames = [Image.convert(frame) for frame in output]
@@ -154,34 +154,33 @@ class Tracking(SupportedType):
         msg = ROSTracking()
         msg.ids = output.get("ids") or []
         msg.labels = output.get("tracked_labels") or []
-        centroids = []
+
         estimated_velocities = []
-        # assumes centroids and estimated_velocities would be of equal length
-        if o_centroids := output.get("centroids") and (
-            o_estimated_velocities := output.get("estimated_velocities")
-        ):
-            for obj_centroids, obj_vels in zip(o_centroids, o_estimated_velocities):
-                for obj_instance_c, obj_instance_v in zip(obj_centroids, obj_vels):
-                    centroid = Point2D()
-                    centroid.x = obj_instance_c[0]
-                    centroid.y = obj_instance_c[1]
-                    centroids.append(centroid)
+        if o_estimated_velocities := output.get("estimated_velocities"):
+            for obj_vels in o_estimated_velocities:
+                for obj_instance_v in obj_vels:
                     estimated_velocity = Point2D()
                     estimated_velocity.x = obj_instance_v[0]
                     estimated_velocity.y = obj_instance_v[1]
                     estimated_velocities.append(estimated_velocity)
 
-        boxes = []
-        for bbox in output["bboxes"]:
-            box = Bbox2D()
-            box.top_left_x = bbox[0]
-            box.top_left_y = bbox[1]
-            box.bottom_right_x = bbox[2]
-            box.bottom_right_y = bbox[3]
-            boxes.append(box)
+        tracked_boxes = []
+        centroids = []
+        if o_tracked_points := output.get("tracked_points"):
+            for bbox in o_tracked_points:
+                # Each 3 points represent one object (top-left, bottom-right, center)
+                box = Bbox2D()
+                box.top_left_x = bbox[0][0]
+                box.top_left_y = bbox[0][1]
+                box.bottom_right_x = bbox[1][0]
+                box.bottom_right_y = bbox[1][1]
+                tracked_boxes.append(box)
+                centroid = Point2D()
+                centroid.x = bbox[2][0]
+                centroid.y = bbox[2][1]
+                centroids.append(centroid)
 
-        msg.boxes = boxes
-        msg.scores = output["scores"]
+        msg.boxes = tracked_boxes
         msg.centroids = centroids
         msg.estimated_velocities = estimated_velocities
         msg.image = Image.convert(img)
@@ -248,6 +247,9 @@ class Topic(BaseTopic):
         :param value:
         """
         self.ros_msg_type = value._ros_type
+
+    def __attrs_post_init__(self):
+        pass
 
 
 @define(kw_only=True)

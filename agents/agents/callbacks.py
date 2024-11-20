@@ -94,7 +94,7 @@ class ObjectDetectionCallback(GenericCallback):
         Processes labels and returns a context string for
         prompt engineering
 
-        :returns:   Comma seperated classnames
+        :returns:   Comma separated classnames
         :rtype:     str
         """
         if not self.msg:

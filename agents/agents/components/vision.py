@@ -138,4 +138,8 @@ class Vision(ModelComponent):
                 # publish inference result
                 if result["output"] and hasattr(self, "publishers_dict"):
                     for publisher in self.publishers_dict.values():
-                        publisher.publish(**result)
+                        publisher.publish(
+                            **result,
+                            frame_id=self.trig_callbacks[trigger.name].frame_id,
+                            time_stamp=self.get_ros_time(),
+                        )
