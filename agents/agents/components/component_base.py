@@ -166,7 +166,7 @@ class Component(BaseComponent):
                 f"{topics_direction} to a component can only be of type Topic"
             )
 
-        # message type validation based on allowed types
+        # Check that only the allowed topics (or their subtypes) have been given
         if not allowed_topic_types:
             return
 
@@ -185,9 +185,13 @@ class Component(BaseComponent):
             raise TypeError(
                 f"{topics_direction} to the component can only be of the allowed datatypes: {all_topic_types} or their subclasses. A {msg_type} cannot be given to this component."
             )
+
+        # Check that all required topics (or subtypes) have been given
         sufficient_topics = all(
-            msg_type in all_msg_types for msg_type in allowed_topic_types["Required"]
+            any(issubclass(m_type, allowed_type) for m_type in all_msg_types)
+            for allowed_type in allowed_topic_types["Required"]
         )
+
         if not sufficient_topics:
             raise TypeError(
                 f"The component {topics_direction} should have at least one topic of each datatype in the following list: {allowed_topic_types['Required']}"
