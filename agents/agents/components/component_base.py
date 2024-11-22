@@ -186,7 +186,7 @@ class Component(BaseComponent):
                 f"{topics_direction} to the component can only be of the allowed datatypes: {all_topic_types} or their subclasses. A {msg_type} cannot be given to this component."
             )
         sufficient_topics = all(
-            msg_type in all_topic_types for msg_type in allowed_topic_types["Required"]
+            msg_type in all_msg_types for msg_type in allowed_topic_types["Required"]
         )
         if not sufficient_topics:
             raise TypeError(
