@@ -35,10 +35,19 @@ class Component(BaseComponent):
 
         # setup inputs and outputs
         if inputs:
-            self.validate_topics(inputs)
+            self.validate_topics(
+                inputs,
+                allowed_topic_types=self.allowed_inputs,
+                topics_direction="Inputs",
+            )
 
         if outputs:
-            self.validate_topics(outputs)
+            if hasattr(self, "allowed_outputs"):
+                self.validate_topics(
+                    outputs,
+                    allowed_topic_types=self.allowed_outputs,
+                    topics_direction="Outputs",
+                )
 
         # Initialize Parent Component
         super().__init__(
@@ -144,7 +153,7 @@ class Component(BaseComponent):
     def validate_topics(
         self,
         topics: Sequence[Union[Topic, FixedInput]],
-        allowed_topics: Optional[Dict[str, List[type[SupportedType]]]] = None,
+        allowed_topic_types: Optional[Dict[str, List[type[SupportedType]]]] = None,
         topics_direction: str = "Topics",
     ):
         """
@@ -158,26 +167,30 @@ class Component(BaseComponent):
             )
 
         # message type validation based on allowed types
-        if not allowed_topics:
+        if not allowed_topic_types:
             return
 
+        def __check_msg_types(all_msg_types, all_topic_types):
+            for msg_type in all_msg_types:
+                for allowed_t in all_topic_types:
+                    if not issubclass(msg_type, allowed_t):
+                        return msg_type
+
         all_msg_types = [topic.msg_type for topic in topics]
-        all_topics_types = allowed_topics["Required"] + (
-            allowed_topics.get("Optional") or []
+        all_topic_types = allowed_topic_types["Required"] + (
+            allowed_topic_types.get("Optional") or []
         )
-        correct_topics = all(
-            allowed_t in all_msg_types for allowed_t in allowed_topics["Required"]
-        )
-        correct_msgtypes = all(
-            msg_type in all_topics_types for msg_type in all_msg_types
-        )
-        if not correct_topics:
+
+        if msg_type := __check_msg_types(all_msg_types, all_topic_types):
             raise TypeError(
-                f"The component should be given at least one input of each datatype: {allowed_topics['Required']}"
+                f"{topics_direction} to the component can only be of the allowed datatypes: {all_topic_types} or their subclasses. A {msg_type} cannot be given to this component."
             )
-        if not correct_msgtypes:
+        sufficient_topics = all(
+            msg_type in all_topic_types for msg_type in allowed_topic_types["Required"]
+        )
+        if not sufficient_topics:
             raise TypeError(
-                f"{topics_direction} to the component can only be of the allowed datatypes: {all_topics_types}"
+                f"The component {topics_direction} should have at least one topic of each datatype in the following list: {allowed_topic_types['Required']}"
             )
 
     @abstractmethod
