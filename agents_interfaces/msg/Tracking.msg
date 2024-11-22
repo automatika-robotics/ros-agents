@@ -6,4 +6,6 @@ Bbox2D[]  boxes
 int8[] ids
 Point2D[] estimated_velocities
 
+# Either an image or compressed image
 sensor_msgs/Image image
+sensor_msgs/CompressedImage compressed_image

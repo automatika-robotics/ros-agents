@@ -8,7 +8,7 @@ from ros_sugar.io import (
     get_logger,
 )
 
-from ros_sugar.io.utils import image_pre_processing
+from ros_sugar.io.utils import image_pre_processing, read_compressed_image
 
 from .utils import create_detection_context
 
@@ -70,6 +70,8 @@ class VideoCallback(GenericCallback):
             video = []
             for img in self.msg.frames:
                 video.append(image_pre_processing(img))
+            for img in self.msg.compressed_frames:
+                video.append(read_compressed_image(img))
             return np.array(video)
 
 

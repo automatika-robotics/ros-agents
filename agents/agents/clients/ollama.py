@@ -99,7 +99,7 @@ class OllamaClient(ModelClient):
         }
         inference_input.pop("query")
 
-        # make images parth of the latest message in message list
+        # make images part of the latest message in message list
         if images := inference_input.get("images"):
             input["messages"][-1]["images"] = [encode_arr_base64(img) for img in images]
             inference_input.pop("images")
@@ -125,10 +125,6 @@ class OllamaClient(ModelClient):
             return None
 
         self.logger.debug(str(ollama_result))
-
-        # Add np images back in inference input
-        if images:
-            input["images"] = images
 
         # make result part of the input
         input["output"] = ollama_result["message"]["content"]  # type: ignore

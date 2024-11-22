@@ -1,8 +1,17 @@
 from typing import Any, Union, Optional, List, Dict
+import numpy as np
 
 from ..clients.model_base import ModelClient
 from ..config import VisionConfig
-from ..ros import Detections, FixedInput, Image, Topic, Trackings
+from ..ros import (
+    Detections,
+    FixedInput,
+    Image,
+    Topic,
+    Trackings,
+    ROSImage,
+    ROSCompressedImage,
+)
 from ..utils import validate_func_args
 from .model_component import ModelComponent
 from .component_base import ComponentRunType
@@ -66,6 +75,8 @@ class Vision(ModelComponent):
         self.allowed_inputs = {"Required": [Image]}
         self.handled_outputs = [Detections, Trackings]
 
+        self._images: List[Union[np.ndarray, ROSImage, ROSCompressedImage]] = []
+
         super().__init__(
             inputs,
             outputs,
@@ -90,15 +101,20 @@ class Vision(ModelComponent):
         :param kwargs:
         :rtype: dict[str, Any]
         """
+        self._images = []
         # set one image topic as query for event based trigger
         if trigger := kwargs.get("topic"):
             images = [self.trig_callbacks[trigger.name].get_output()]
+            if msg := kwargs.get("msg"):
+                self._images.append(msg)
         else:
             images = []
 
             for i in self.callbacks.values():
                 if (item := i.get_output()) is not None:
                     images.append(item)
+                    if i.msg:
+                        self._images.append(i.msg)  # Collect all images for publishing
 
         if not images:
             return None
@@ -140,6 +156,6 @@ class Vision(ModelComponent):
                     for publisher in self.publishers_dict.values():
                         publisher.publish(
                             **result,
-                            frame_id=self.trig_callbacks[trigger.name].frame_id,
+                            images=self._images,
                             time_stamp=self.get_ros_time(),
                         )

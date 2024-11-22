@@ -9,10 +9,12 @@ from ros_sugar.supported_types import (
     SupportedType,
     Audio,
     Image,
+    CompressedImage,
     OccupancyGrid,
     Odometry,
     String,
     ROSImage,
+    ROSCompressedImage,
 )
 from ros_sugar.io import (
     get_all_msg_types,
@@ -44,6 +46,7 @@ __all__ = [
     "String",
     "Audio",
     "Image",
+    "CompressedImage",
     "OccupancyGrid",
     "Odometry",
     "Topic",
@@ -76,14 +79,25 @@ class Video(SupportedType):
     callback = VideoCallback
 
     @classmethod
-    def convert(cls, output: Union[List[ROSImage], List[np.ndarray]], **_) -> ROSVideo:
+    def convert(
+        cls,
+        output: Union[List[ROSImage], List[ROSCompressedImage], List[np.ndarray]],
+        **_,
+    ) -> ROSVideo:
         """
         Takes an list of images and returns a video message (Image Array)
         :return: Video
         """
-        frames = [Image.convert(frame) for frame in output]
         msg = ROSVideo()
+        frames = []
+        compressed_frames = []
+        for frame in output:
+            if isinstance(frame, ROSCompressedImage):
+                compressed_frames.append(CompressedImage.convert(frame))
+            else:
+                frames.append(Image.convert(frame))
         msg.frames = frames
+        msg.compressed_frames = compressed_frames
         return msg
 
 
@@ -94,7 +108,9 @@ class Detection(SupportedType):
     callback = None  # not defined
 
     @classmethod
-    def convert(cls, output: Dict, img: np.ndarray, **_) -> Detection2D:
+    def convert(
+        cls, output: Dict, img: Union[ROSImage, ROSCompressedImage, np.ndarray], **_
+    ) -> Detection2D:
         """
         Takes object detection data and converts it into a ROS message
         of type Detection2D
@@ -113,7 +129,10 @@ class Detection(SupportedType):
             boxes.append(box)
 
         msg.boxes = boxes
-        msg.image = Image.convert(img)
+        if isinstance(img, ROSCompressedImage):
+            msg.compressed_image = CompressedImage.convert(img)
+        else:
+            msg.image = Image.convert(img)
         return msg
 
 
@@ -145,7 +164,9 @@ class Tracking(SupportedType):
     callback = None  # Not defined
 
     @classmethod
-    def convert(cls, output: Dict, img: np.ndarray, **_) -> ROSTracking:
+    def convert(
+        cls, output: Dict, img: Union[ROSImage, ROSCompressedImage, np.ndarray], **_
+    ) -> ROSTracking:
         """
         Takes tracking data and converts it into a ROS message
         of type Tracking
@@ -183,7 +204,10 @@ class Tracking(SupportedType):
         msg.boxes = tracked_boxes
         msg.centroids = centroids
         msg.estimated_velocities = estimated_velocities
-        msg.image = Image.convert(img)
+        if isinstance(img, ROSCompressedImage):
+            msg.compressed_image = CompressedImage.convert(img)
+        else:
+            msg.image = Image.convert(img)
         return msg
 
 

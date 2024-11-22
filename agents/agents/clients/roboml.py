@@ -123,12 +123,6 @@ class HTTPModelClient(ModelClient):
 
         self.logger.debug(str(result))
 
-        # replace np images back in inference input
-        if images:
-            inference_input["images"] = images
-
-        # make input query part of the result
-        result.update(inference_input)
         return result
 
     def _deinitialize(self) -> None:
@@ -463,8 +457,6 @@ class RESPModelClient(ModelClient):
 
         self.logger.debug(str(result))
 
-        # make input query part of the result
-        result.update(inference_input)
         return result
 
     def _deinitialize(self) -> None:
