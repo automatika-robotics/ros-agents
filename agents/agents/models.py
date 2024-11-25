@@ -410,6 +410,8 @@ class VisionModel(Model):
     :type tracking_distance_function: str
     :param tracking_distance_threshold: The threshold for determining whether two object in consecutive frames are considered close enough to be considered the same object. Default is 30, with a minimum value of 1.
     :type tracking_distance_threshold: int
+    :param deploy_tensorrt: Deploy the vision model using NVIDIA TensorRT. To utilize this feature with roboml, checkout the instructions [here](https://github.com/automatika-robotics/roboml). Default is False.
+    :type deploy_tensorrt: bool
     :param _num_trackers: The number of trackers to use. This number depends on the number of inputs image streams being given to the component. It is set automatically if **setup_trackers** is True.
     :type _num_trackers: int
     :param init_timeout: The timeout in seconds for the initialization process. Defaults to None.
@@ -428,6 +430,7 @@ class VisionModel(Model):
     tracking_distance_threshold: int = field(
         default=30, validator=base_validators.gt(0)
     )
+    deploy_tensorrt: bool = field(default=False)
     _num_trackers: int = field(default=1, validator=base_validators.gt(0))
 
     def _get_init_params(self) -> Dict:
@@ -439,4 +442,5 @@ class VisionModel(Model):
             "num_trackers": self._num_trackers,
             "tracking_distance_function": self.tracking_distance_function,
             "tracking_distance_threshold": self.tracking_distance_threshold,
+            "deploy_tensorrt": self.deploy_tensorrt,
         }
