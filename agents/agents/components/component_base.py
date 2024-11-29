@@ -170,20 +170,23 @@ class Component(BaseComponent):
         if not allowed_topic_types:
             return
 
-        def __check_msg_types(all_msg_types, all_topic_types):
-            for msg_type in all_msg_types:
-                for allowed_t in all_topic_types:
-                    if not issubclass(msg_type, allowed_t):
-                        return msg_type
-
-        all_msg_types = [topic.msg_type for topic in topics]
+        all_msg_types = {topic.msg_type for topic in topics}
         all_topic_types = allowed_topic_types["Required"] + (
             allowed_topic_types.get("Optional") or []
         )
 
-        if msg_type := __check_msg_types(all_msg_types, all_topic_types):
+        if msg_type := next(
+            (
+                topic
+                for topic in all_msg_types
+                if not any(
+                    issubclass(topic, allowed_t) for allowed_t in all_topic_types
+                )
+            ),
+            None,
+        ):
             raise TypeError(
-                f"{topics_direction} to the component can only be of the allowed datatypes: {all_topic_types} or their subclasses. A {msg_type} cannot be given to this component."
+                f"{topics_direction} to the component of type {self.__class__.__name__} can only be of the allowed datatypes: {[topic.__name__ for topic in all_topic_types]} or their subclasses. A topic of type {msg_type.__name__} cannot be given to this component."
             )
 
         # Check that all required topics (or subtypes) have been given
@@ -194,7 +197,7 @@ class Component(BaseComponent):
 
         if not sufficient_topics:
             raise TypeError(
-                f"The component {topics_direction} should have at least one topic of each datatype in the following list: {allowed_topic_types['Required']}"
+                f"{self.__class__.__name__} component {topics_direction} should have at least one topic of each datatype in the following list: {[topic.__name__ for topic in allowed_topic_types['Required']]}"
             )
 
     @abstractmethod
