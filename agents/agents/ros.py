@@ -6,6 +6,7 @@ from attrs import define, field, Factory
 
 # FROM ROS_SUGAR
 from ros_sugar.supported_types import (
+    add_additional_datatypes,
     SupportedType,
     Audio,
     Image,
@@ -16,13 +17,8 @@ from ros_sugar.supported_types import (
     ROSImage,
     ROSCompressedImage,
 )
-from ros_sugar.io import (
-    get_all_msg_types,
-    get_msg_type,
-    Topic as BaseTopic,
-)
+from ros_sugar.io import Topic as BaseTopic
 
-from ros_sugar.io.topic import _normalize_topic_name
 from ros_sugar.config import (
     BaseComponentConfig,
     ComponentRunType,
@@ -61,15 +57,6 @@ __all__ = [
     "MapLayer",
     "Route",
 ]
-
-
-def get_msg_type_extra(
-    type_name: Union[type[SupportedType], str],
-) -> Union[type[SupportedType], str]:
-    """Closure around verification function in ros_sugar to provide additional types."""
-    return get_msg_type(
-        type_name, additional_types=[Video, Detection, Detections, Tracking, Trackings]
-    )
 
 
 class Video(SupportedType):
@@ -232,6 +219,12 @@ class Trackings(SupportedType):
         return msg
 
 
+agent_types = [Video, Detection, Detections, Tracking, Trackings]
+
+
+add_additional_datatypes(agent_types)
+
+
 @define(kw_only=True)
 class Topic(BaseTopic):
     """
@@ -251,33 +244,11 @@ class Topic(BaseTopic):
     ```
     """
 
-    name: str = field(converter=_normalize_topic_name)
-    msg_type: Union[type[SupportedType], str] = field(
-        converter=get_msg_type_extra,
-        validator=base_validators.in_(
-            get_all_msg_types(
-                additional_types=[Video, Detection, Detections, Tracking, Trackings]
-            )
-        ),
-    )
-    # qos_profile is configured in parent class
-    ros_msg_type: Any = field(init=False)
-
-    @msg_type.validator
-    def _update_ros_type(self, _, value):
-        """_update_ros_type.
-
-        :param _:
-        :param value:
-        """
-        self.ros_msg_type = value._ros_type
-
-    def __attrs_post_init__(self):
-        pass
+    pass
 
 
 @define(kw_only=True)
-class FixedInput(BaseAttrs):
+class FixedInput(Topic):
     """
     A FixedInput can be provided to components as input and is similar to a Topic except components do not create a subscriber to it and whenever they _read_ it, they always get the same data. The nature of the data depends on the _msg_type_ specified.
 
@@ -297,15 +268,6 @@ class FixedInput(BaseAttrs):
     ```
     """
 
-    name: str = field(converter=_normalize_topic_name)
-    msg_type: Union[type[SupportedType], str] = field(
-        converter=get_msg_type_extra,
-        validator=base_validators.in_(
-            get_all_msg_types(
-                additional_types=[Video, Detection, Detections, Tracking, Trackings]
-            )
-        ),
-    )
     fixed: Any = field()
 
 
