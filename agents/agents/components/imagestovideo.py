@@ -3,10 +3,9 @@ from typing import Optional, Union, List
 
 import cv2
 import numpy as np
-from sensor_msgs.msg import Image as ROSImage
 
 from ..config import VideoMessageMakerConfig
-from ..ros import Image, Topic, Video
+from ..ros import Image, Topic, Video, ROSImage, ROSCompressedImage
 from ..utils import validate_func_args
 from .component_base import Component
 
@@ -80,7 +79,7 @@ class VideoMessageMaker(Component):
             **kwargs,
         )
 
-        self._frames: List[ROSImage] = []
+        self._frames: Union[List[ROSImage], List[ROSCompressedImage]] = []
         self._last_frame: Optional[np.ndarray] = None
         self._capture: bool = False
 

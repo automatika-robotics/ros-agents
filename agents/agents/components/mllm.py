@@ -117,7 +117,7 @@ class MLLM(LLM):
                 elif i.input_topic.msg_type is Detections:
                     context[i.input_topic.name] = item
                 # get images from image topics
-                if i.input_topic.msg_type == Image:
+                if issubclass(i.input_topic.msg_type, Image):
                     images.append(item)
 
         if not query or not images:
