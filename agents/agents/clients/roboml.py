@@ -1,5 +1,4 @@
 import base64
-import time
 from enum import Enum
 from typing import Any, Optional, Dict, Union
 
@@ -85,9 +84,10 @@ class HTTPModelClient(ModelClient):
             model_type = self.model_type
         start_params = {"node_name": self.model_name, "node_type": model_type}
         try:
-            httpx.post(
+            r = httpx.post(
                 f"{self.url}/add_node", params=start_params, timeout=self.init_timeout
             ).raise_for_status()
+            self.logger.debug(str(r.json()))
             self.logger.info(f"Initializing {self.model_name} on RoboML remote")
             # get initialization params and initiale model
             httpx.post(
@@ -96,7 +96,8 @@ class HTTPModelClient(ModelClient):
                 timeout=self.init_timeout,
             ).raise_for_status()
         except Exception as e:
-            return self.__handle_exceptions(e)
+            self.__handle_exceptions(e)
+            raise
         self.logger.info(f"{self.model_name} initialized on remote")
 
     def _inference(self, inference_input: Dict[str, Any]) -> Optional[Dict]:
@@ -204,9 +205,10 @@ class HTTPDBClient(DBClient):
         self.logger.info("Creating db node on remote")
         start_params = {"node_name": self.db_name, "node_type": self.db_type}
         try:
-            httpx.post(
+            r = httpx.post(
                 f"{self.url}/add_node", params=start_params, timeout=self.init_timeout
             ).raise_for_status()
+            self.logger.debug(str(r.json()))
             self.logger.info(f"Initializing {self.db_name} on RoboML remote")
             # get initialization params and initiale db
             httpx.post(
@@ -215,7 +217,8 @@ class HTTPDBClient(DBClient):
                 timeout=self.init_timeout,
             ).raise_for_status()
         except Exception as e:
-            return self.__handle_exceptions(e)
+            self.__handle_exceptions(e)
+            raise
         self.logger.info(f"{self.db_name} initialized on remote")
 
     def _add(self, db_input: Dict[str, Any]) -> Optional[Dict]:
@@ -408,38 +411,31 @@ class RESPModelClient(ModelClient):
         start_params = {"node_name": self.model_name, "node_type": model_type}
         try:
             start_params_b = self.packer(start_params)
-            self.redis.execute_command("add_node", start_params_b)
-
+            node_init_result = self.redis.execute_command("add_node", start_params_b)
+            if node_init_result:
+                self.logger.debug(str(self.unpacker(node_init_result)))
             self.logger.info(f"Initializing {self.model_name} on RoboML remote")
             # make initialization params
             model_dict = self.model_init_params
-
             # initialize model
             init_b = self.packer(model_dict)
             self.redis.execute_command(f"{self.model_name}.initialize", init_b)
         except Exception as e:
-            return self.__handle_exceptions(e)
+            self.__handle_exceptions(e)
+            raise
 
         # check status for init completion after every second
         status = self.__check_model_status()
-        counter = 0
-        while status != Status.READY:
-            if self.init_timeout and counter > self.init_timeout:
-                break
-            time.sleep(1)
-            counter += 1
-            status = self.__check_model_status()
-
         if status == Status.READY:
             self.logger.info(f"{self.model_name} model initialized on remote")
         elif status == Status.INITIALIZING:
-            self.logger.error(f"{self.model_name} model initialization timed out.")
+            raise Exception(f"{self.model_name} model initialization timed out.")
         elif status == Status.INITIALIZATION_ERROR:
-            self.logger.error(
+            raise Exception(
                 f"{self.model_name} model initialization failed. Check remote for logs."
             )
         else:
-            self.logger.error(
+            raise Exception(
                 f"Unexpected Error while initializing {self.model_name}: Check remote for logs."
             )
 
@@ -565,36 +561,29 @@ class RESPDBClient(DBClient):
 
         try:
             start_params_b = self.packer(start_params)
-            self.redis.execute_command("add_node", start_params_b)
-        except Exception as e:
-            self.__handle_exceptions(e)
-
-        self.logger.info(f"Initializing {self.db_name} on remote")
-        try:
+            node_init_result = self.redis.execute_command("add_node", start_params_b)
+            if node_init_result:
+                self.logger.debug(str(self.unpacker(node_init_result)))
+            self.logger.info(f"Initializing {self.db_name} on remote")
             init_b = self.packer(self.db_init_params)
             # initialize database
             self.redis.execute_command(f"{self.db_name}.initialize", init_b)
         except Exception as e:
-            return self.__handle_exceptions(e)
+            self.__handle_exceptions(e)
+            raise
 
         # check status for init completion after every second
         status = self.__check_db_status()
-        counter = 0
-        while status != Status.READY and counter < self.init_timeout:
-            time.sleep(1)
-            counter += 1
-            status = self.__check_db_status()
-
         if status == Status.READY:
             self.logger.info(f"{self.db_name} db initialized on remote")
         elif status == Status.INITIALIZING:
-            self.logger.error(f"{self.db_name} db initialization timed out.")
+            raise Exception(f"{self.db_name} db initialization timed out.")
         elif status == Status.INITIALIZATION_ERROR:
-            self.logger.error(
+            raise Exception(
                 f"{self.db_name} db initialization failed. Check remote for logs."
             )
         else:
-            self.logger.error(
+            raise Exception(
                 f"Unexpected Error while initializing {self.db_name}: Check remote for logs."
             )
 
