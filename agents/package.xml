@@ -1,11 +1,11 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>agents</name>
+  <name>automatika_embodied_agents</name>
   <version>0.3.1</version>
   <description>agents</description>
   <maintainer email="contact@automatikarobotics.com">Automatika Robotics</maintainer>
-  <license>MIT License Copyright (c) 2024 Automatika Robotics</license>
+  <license>MIT</license>
 
   <depend>rclpy</depend>
   <depend>std_msgs</depend>
@@ -24,7 +24,7 @@
   <exec_depend>rosidl_default_runtime</exec_depend>
   <member_of_group>rosidl_interface_packages</member_of_group>
 
-  <exec_depend>agents_interfaces</exec_depend>
+  <exec_depend>automatika-agents-interfaces</exec_depend>
 
   <test_depend>python3-pytest</test_depend>
 

@@ -30,8 +30,8 @@ from ros_sugar import Launcher
 from ros_sugar.utils import component_action
 
 # LEIBNIZ TYPES
-from agents_interfaces.msg import Point2D, Bbox2D, Detection2D, Detections2D
-from agents_interfaces.msg import (
+from automatika_agents_interfaces.msg import Point2D, Bbox2D, Detection2D, Detections2D
+from automatika_agents_interfaces.msg import (
     Video as ROSVideo,
     Tracking as ROSTracking,
     Trackings as ROSTrackings,
