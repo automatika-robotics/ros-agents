@@ -191,7 +191,7 @@ class Llama3(TransformersLLM):
 
     Example usage:
     ```python
-    llama = Llama3_1(name='llama', checkpoint="other_checkpoint_name")  # Initialize with a custom checkpoint
+    llama = Llama3(name='llama', checkpoint="other_checkpoint_name")  # Initialize with a custom checkpoint
     ```
     """
 

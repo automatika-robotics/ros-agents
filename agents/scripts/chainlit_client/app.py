@@ -292,25 +292,3 @@ async def on_chat_end():
         client: ClientNode = cl.user_session.get("client")
         client.destroy_node()
         rclpy.shutdown()
-
-
-def main():
-    """Run from ROS"""
-    # TODO: Add chainlit option handling via ROS
-    from pathlib import Path
-    from chainlit.cli import run_chainlit
-    from chainlit.config import config
-
-    root_path = Path(__file__)
-
-    # Set general config options
-    config.run.headless = True
-    config.project.enable_telemetry = False
-    config.root = str(root_path.parent)
-
-    # Set audio config options
-    config.features.audio.sample_rate = 16000  # type: ignore
-    config.features.audio.initial_silence_timeout = 2000  # type: ignore
-    config.features.audio.silence_timeout = 1000  # type: ignore
-
-    run_chainlit(str(root_path))

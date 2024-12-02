@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import json
 import argparse
 from typing import List, Dict, Union
@@ -7,10 +8,10 @@ import setproctitle
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.utilities import try_shutdown
 
-from . import config as all_configs
-from . import components as all_components
-from . import clients
-from .ros import Topic, FixedInput, MapLayer, Route
+from agents import config as all_configs
+from agents import components as all_components
+from agents import clients
+from agents.ros import Topic, FixedInput, MapLayer, Route
 
 
 def _parse_args() -> tuple[argparse.Namespace, List[str]]:
@@ -304,3 +305,7 @@ def main():
     finally:
         executor.remove_node(component)
         try_shutdown()
+
+
+if __name__ == "__main__":
+    main()

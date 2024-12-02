@@ -194,7 +194,7 @@ launcher.bringup()
 To interact with text and audio based topics on the robot, ROS Agents includes a tiny browser based client made with [chainlit](https://chainlit.io/). This is useful if the robot does not have a microphone/speaker interface or if one wants to communicate with it remotely. The client can be launched as follows:
 
 ```shell
-ros2 run ros-agents tiny_web_client
+ros2 run automatika_embodied_agents tiny_web_client
 ```
 
 The client displays a web UI on http://localhost:8000. Open this address from browser. ROS input and output topic settings for text and audio topics can be configured from the web UI by pressing the settings icon.
