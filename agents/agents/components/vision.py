@@ -117,8 +117,7 @@ class Vision(ModelComponent):
 
     def _visualize(self):
         """CV2 based visualization of infereance results"""
-        window_name = "Visualization"
-        cv2.namedWindow(window_name)
+        cv2.namedWindow(self.node_name)
 
         while not self.stop_event.is_set():
             try:
@@ -157,7 +156,7 @@ class Vision(ModelComponent):
                         thickness=-1,
                     )
 
-            cv2.imshow(window_name, image)
+            cv2.imshow(self.node_name, image)
 
             if cv2.waitKey(1) & 0xFF == ord("q"):
                 self.get_logger().warning("User pressed 'q', stopping visualization.")
