@@ -1,5 +1,8 @@
 from typing import Any, Union, Optional, List, Dict
+import queue
+import threading
 import numpy as np
+import cv2
 
 from ..clients.model_base import ModelClient
 from ..config import VisionConfig
@@ -95,6 +98,73 @@ class Vision(ModelComponent):
         if hasattr(model_client, "_model") and self.model_client._model.setup_trackers:  # type: ignore
             model_client._model._num_trackers = len(inputs)
 
+    def activate(self):
+        # activate component
+        super().activate()
+        if self.config.enable_visualization:
+            self.queue = queue.Queue()
+            self.stop_event = threading.Event()
+            self.visualization_thread = threading.Thread(target=self._visualize).start()
+
+    def deactivate(self):
+        # if visualization is enabled, join thread
+        if self.config.enable_visualization:
+            if self.visualization_thread:
+                self.stop_event.set()
+                self.visualization_thread.join()
+        # deactivate component
+        super().deactivate()
+
+    def _visualize(self):
+        """CV2 based visualization of infereance results"""
+        window_name = "Visualization"
+        cv2.namedWindow(window_name)
+
+        while not self.stop_event.is_set():
+            try:
+                # Add timeout to periodically check for stop event
+                data = self.queue.get(timeout=1)
+            except queue.Empty:
+                self.get_logger().warning(
+                    "Visualization queue is empty, waiting for new data..."
+                )
+                continue
+
+            # Only handle the first image and its output
+            image = data["images"][0]
+            bounding_boxes = data["output"][0].get("bboxes", [])
+            tracked_objects = data["output"][0].get("tracked_points", [])
+
+            for bbox in bounding_boxes:
+                # Assuming bbox format: (x1, y1, x2, y2)
+                cv2.rectangle(
+                    image,
+                    (int(bbox[0]), int(bbox[1])),
+                    (int(bbox[2]), int(bbox[3])),
+                    (0, 255, 0),
+                    2,
+                )
+
+            for point_list in tracked_objects:
+                # Each point_list is a list of points on one tracked object
+                for point in point_list:
+                    # Assuming point format: (x, y)
+                    cv2.circle(
+                        image,
+                        (int(point[0]), int(point[1])),
+                        radius=4,
+                        color=(0, 0, 255),
+                        thickness=-1,
+                    )
+
+            cv2.imshow(window_name, image)
+
+            if cv2.waitKey(1) & 0xFF == ord("q"):
+                self.get_logger().warning("User pressed 'q', stopping visualization.")
+                break
+
+        cv2.destroyAllWindows()
+
     def _create_input(self, *_, **kwargs) -> Optional[Dict[str, Any]]:
         """Create inference input for ObjectDetection models
         :param args:
@@ -132,7 +202,7 @@ class Vision(ModelComponent):
             trigger = kwargs.get("topic")
             if not trigger:
                 return
-            self.get_logger().info(f"Received trigger on topic {trigger.name}")
+            # self.get_logger().info(f"Received trigger on topic {trigger.name}")
         else:
             time_stamp = self.get_ros_time().sec
             self.get_logger().info(f"Sending at {time_stamp}")
@@ -148,14 +218,17 @@ class Vision(ModelComponent):
         if self.model_client:
             result = self.model_client.inference(inference_input)
             # raise a fallback trigger via health status
-            if not result:
-                self.health_status.set_failure()
-            else:
+            if result:
                 # publish inference result
-                if result["output"] and hasattr(self, "publishers_dict"):
+                if hasattr(self, "publishers_dict"):
                     for publisher in self.publishers_dict.values():
                         publisher.publish(
                             **result,
                             images=self._images,
                             time_stamp=self.get_ros_time(),
                         )
+                if self.config.enable_visualization:
+                    result["images"] = inference_input["images"]
+                    self.queue.put_nowait(result)
+            else:
+                self.health_status.set_failure()

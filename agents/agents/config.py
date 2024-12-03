@@ -148,6 +148,7 @@ class VisionConfig(BaseComponentConfig):
     )
     get_data_labels: bool = field(default=True)
     labels_to_track: Optional[List[str]] = field(default=None)
+    enable_visualization: Optional[bool] = field(default=False)
 
     def _get_inference_params(self) -> Dict:
         """get_inference_params.
