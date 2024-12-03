@@ -130,9 +130,8 @@ class SpeechToText(ModelComponent):
             if not trigger:
                 return None
             query = self.trig_callbacks[trigger.name].get_output()
-
-        if query is None or len(query) == 0:
-            return None
+            if query is None or len(query) == 0:
+                return None
 
         return {"query": query, **self.config._get_inference_params()}
 
@@ -235,12 +234,11 @@ class SpeechToText(ModelComponent):
         # conduct inference
         if self.model_client:
             result = self.model_client.inference(inference_input)
-            # raise a fallback trigger via health status
-            if not result:
-                self.health_status.set_failure()
+            if result:
+                # publish inference result
+                if self.publishers_dict:
+                    for publisher in self.publishers_dict.values():
+                        publisher.publish(**result)
             else:
-                if result["output"]:
-                    # publish inference result
-                    if self.publishers_dict:
-                        for publisher in self.publishers_dict.values():
-                            publisher.publish(**result)
+                # raise a fallback trigger via health status
+                self.health_status.set_failure()

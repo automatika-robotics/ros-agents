@@ -127,7 +127,11 @@ class OllamaClient(ModelClient):
         self.logger.debug(str(ollama_result))
 
         # make result part of the input
-        input["output"] = ollama_result["message"]["content"]  # type: ignore
+        if output := ollama_result["message"].get("content"):
+            input["output"] = output  # type: ignore
+        else:
+            self.logger.debug("Output not received")
+            return
 
         # if tool calls exist
         if tool_calls := ollama_result["message"].get("tool_calls"):  # type: ignore

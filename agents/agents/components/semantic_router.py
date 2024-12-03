@@ -176,8 +176,9 @@ class SemanticRouter(Component):
                 else result["output"]["metadatas"][0][0]["route_name"]
             )
 
-            if self.publishers_dict:
-                self.publishers_dict[route].publish(trigger_query)
+            self.publishers_dict[route].publish(trigger_query)
+        else:
+            self.health_status.set_failure()
 
     def _routes(self, routes: List[Route]):
         """

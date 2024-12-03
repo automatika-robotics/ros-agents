@@ -387,7 +387,7 @@ class LLM(ModelComponent):
                 return
 
             # publish inference result
-            if result["output"] is not None and hasattr(self, "publishers_dict"):
+            if hasattr(self, "publishers_dict"):
                 for publisher in self.publishers_dict.values():
                     publisher.publish(**result)
 

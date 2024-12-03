@@ -248,21 +248,20 @@ class TextToSpeech(ModelComponent):
         # conduct inference
         if self.model_client:
             result = self.model_client.inference(inference_input)
-            # raise a fallback trigger via health status
-            if not result:
-                self.health_status.set_failure()
+            if result:
+                if self.config.play_on_device:
+                    # Stop any previous playback by setting event and clearing queue
+                    self.event.set()
+                    with self.queue.mutex:
+                        self.queue.queue.clear()
+                    # Start a new playback thread
+                    threading.Thread(
+                        target=self._playback_audio, args=(result.get("output"),)
+                    ).start()
+                # publish inference result
+                if hasattr(self, "publishers_dict"):
+                    for publisher in self.publishers_dict.values():
+                        publisher.publish(**result)
             else:
-                if result["output"]:
-                    if self.config.play_on_device:
-                        # Stop any previous playback by setting event and clearing queue
-                        self.event.set()
-                        with self.queue.mutex:
-                            self.queue.queue.clear()
-                        # Start a new playback thread
-                        threading.Thread(
-                            target=self._playback_audio, args=(result["output"],)
-                        ).start()
-                    # publish inference result
-                    if hasattr(self, "publishers_dict"):
-                        for publisher in self.publishers_dict.values():
-                            publisher.publish(**result)
+                # raise a fallback trigger via health status
+                self.health_status.set_failure()
