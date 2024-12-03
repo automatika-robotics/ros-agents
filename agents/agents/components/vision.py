@@ -130,7 +130,10 @@ class Vision(ModelComponent):
                 continue
 
             # Only handle the first image and its output
-            image = data["images"][0]
+            image = cv2.cvtColor(
+                data["images"][0], cv2.COLOR_RGB2BGR
+            )  # as cv2 expects a BGR
+
             bounding_boxes = data["output"][0].get("bboxes", [])
             tracked_objects = data["output"][0].get("tracked_points", [])
 
