@@ -22,7 +22,6 @@ import numpy as np
 from attrs import Attribute
 from jinja2 import Environment, FileSystemLoader
 from jinja2.environment import Template
-from PIL import Image
 from .pluralize import pluralize
 
 
@@ -204,7 +203,7 @@ class VADStatus(Enum):
 
 
 class PDFReader:
-    """Load pdf using pdfreader. Used for testing"""
+    """Load pdf using pdfreader. Used for testing PDF RAG"""
 
     @validate_func_args
     def __init__(
@@ -221,14 +220,16 @@ class PDFReader:
         """
         try:
             from pypdf import PdfReader
+            from PIL import Image
         except ModuleNotFoundError as e:
             raise ModuleNotFoundError(
-                "In order to use the PDFReader, you need pypdf package installed. You can install it with 'pip install pypdf'"
+                "In order to use the PDFReader, you need pypdf and pillow packages installed. You can install them with 'pip install pypdf pillow'"
             ) from e
         if not Path(pdf_file).is_file():
             raise TypeError(f"{pdf_file} is not a valid file")
         try:
             self.reader = PdfReader(pdf_file, password=password)
+            self.image_reader = Image
         except Exception as e:
             raise TypeError(f"{pdf_file} is not a valid PDF") from e
 
@@ -254,7 +255,9 @@ class PDFReader:
             ids.append(str(uuid.uuid5(uuid.NAMESPACE_DNS, content)))
             # get images if asked
             if extract_images:
-                page_images = [Image.open(BytesIO(img.data)) for img in page.images]
+                page_images = [
+                    self.image_reader.open(BytesIO(img.data)) for img in page.images
+                ]
                 images += page_images
 
         return ids, metadatas, documents
