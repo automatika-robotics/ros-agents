@@ -98,22 +98,24 @@ class Vision(ModelComponent):
         if hasattr(model_client, "_model") and self.model_client._model.setup_trackers:  # type: ignore
             model_client._model._num_trackers = len(inputs)
 
-    def activate(self):
-        # activate component
-        super().activate()
+    def custom_on_configure(self):
+        # configure parent component
+        super().custom_on_configure()
+
+        # create visualization thread if enabled
         if self.config.enable_visualization:
             self.queue = queue.Queue()
             self.stop_event = threading.Event()
             self.visualization_thread = threading.Thread(target=self._visualize).start()
 
-    def deactivate(self):
-        # if visualization is enabled, join thread
+    def custom_on_deactivate(self):
+        # if visualization is enabled, shutdown the thread
         if self.config.enable_visualization:
             if self.visualization_thread:
                 self.stop_event.set()
                 self.visualization_thread.join()
         # deactivate component
-        super().deactivate()
+        super().custom_on_deactivate()
 
     def _visualize(self):
         """CV2 based visualization of infereance results"""
@@ -204,7 +206,7 @@ class Vision(ModelComponent):
             trigger = kwargs.get("topic")
             if not trigger:
                 return
-            # self.get_logger().info(f"Received trigger on topic {trigger.name}")
+            self.get_logger().info(f"Received trigger on topic {trigger.name}")
         else:
             time_stamp = self.get_ros_time().sec
             self.get_logger().info(f"Sending at {time_stamp}")
@@ -234,3 +236,37 @@ class Vision(ModelComponent):
                     self.queue.put_nowait(result)
             else:
                 self.health_status.set_failure()
+
+    def _warmup(self):
+        """Warm up and stat check"""
+        import time
+        from pathlib import Path
+
+        if (
+            hasattr(self, "trig_callbacks")
+            and list(self.trig_callbacks.values())[0].get_output() is not None
+        ):
+            image = list(self.trig_callbacks.values())[0].get_output()
+            self.get_logger().warning("Got image input from trigger topic")
+        else:
+            self.get_logger().warning(
+                "Did not get image input from trigger topic. Camera device might not be working and topic is not being published to, using a test image."
+            )
+            image = cv2.imread(
+                str(Path(__file__).parents[1] / Path("resources/test.jpeg"))
+            )
+
+        inference_input = {"images": [image], **self.config._get_inference_params()}
+
+        # Run inference once to warm up and once to measure time
+        self.model_client.inference(inference_input)
+
+        start_time = time.time()
+        result = self.model_client.inference(inference_input)
+        elapsed_time = time.time() - start_time
+
+        self.get_logger().warning(f"Model Output: {result}")
+        self.get_logger().warning(f"Approximate Inference time: {elapsed_time} seconds")
+        self.get_logger().warning(
+            f"Max throughput: {1 / elapsed_time} frames per second"
+        )
