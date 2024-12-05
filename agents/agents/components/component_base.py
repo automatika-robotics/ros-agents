@@ -3,7 +3,6 @@ from abc import abstractmethod
 from copy import deepcopy
 from typing import Optional, Sequence, Union, List, Dict
 
-from ..callbacks import GenericCallback
 from ..ros import (
     BaseComponent,
     ComponentRunType,
@@ -63,43 +62,41 @@ class Component(BaseComponent):
         # setup component run type and triggers
         self.trigger(trigger)
 
-    def activate(self):
+    def custom_on_activate(self):
         """
-        Create required subscriptions, publications and timers.
+        Custom configuration for creating triggers.
         """
         # Setup trigger based callback or frequency based timer
         if self.run_type is ComponentRunType.EVENT:
-            self.create_all_triggers()
-
-        super().activate()
-
-    def __add_subscriber_to_callback(self, callback: GenericCallback) -> None:
-        # Creates subscriber and attaches it to input callback object
-        callback.set_node_name(self.node_name)
-        if hasattr(callback.input_topic, "fixed"):
-            self.get_logger().debug(
-                f"Fixed input specified for topic: {callback.input_topic} of type {callback.input_topic.msg_type}"
-            )
-        else:
-            callback.set_subscriber(self._add_ros_subscriber(callback))
+            self.activate_all_triggers()
 
     def create_all_subscribers(self):
         """
-        Override to handle fixed inputs
+        Override to handle trigger topics and fixed inputs.
+        Called by parent BaseComponent
         """
         self.get_logger().info("STARTING ALL SUBSCRIBERS")
-        # Create subscribers
-        for callback in self.callbacks.values():
-            self.__add_subscriber_to_callback(callback)
+        all_callbacks = (
+            list(self.callbacks.values()) + list(self.trig_callbacks.values())
+            if self.run_type is ComponentRunType.EVENT
+            else self.callbacks.values()
+        )
+        for callback in all_callbacks:
+            callback.set_node_name(self.node_name)
+            if hasattr(callback.input_topic, "fixed"):
+                self.get_logger().debug(
+                    f"Fixed input specified for topic: {callback.input_topic} of type {callback.input_topic.msg_type}"
+                )
+            else:
+                callback.set_subscriber(self._add_ros_subscriber(callback))
 
-    def create_all_triggers(self) -> None:
+    def activate_all_triggers(self) -> None:
         """
-        Creates component triggers for events specified as triggers
+        Activates component triggers by attaching execution step to callbacks
         """
-        self.get_logger().info("STARTING SUBSCRIBERS FOR TRIGGER TOPICS")
+        self.get_logger().info("ACTIVATING TRIGGER TOPICS")
         if hasattr(self, "trig_callbacks"):
             for callback in self.trig_callbacks.values():
-                self.__add_subscriber_to_callback(callback)
                 # Add execution step of the node as a post callback function
                 callback.on_callback_execute(self._execution_step)
 
@@ -109,9 +106,9 @@ class Component(BaseComponent):
         """
         self.get_logger().info("DESTROYING ALL SUBSCRIBERS")
         all_callbacks = (
-            self.callbacks.values()
-            if self.run_type is not ComponentRunType.EVENT
-            else list(self.callbacks.values()) + list(self.trig_callbacks.values())
+            list(self.callbacks.values()) + list(self.trig_callbacks.values())
+            if self.run_type is ComponentRunType.EVENT
+            else self.callbacks.values()
         )
         for callback in all_callbacks:
             if callback._subscriber:
@@ -131,7 +128,7 @@ class Component(BaseComponent):
             self.trig_callbacks = {}
             for t in trigger:
                 self.trig_callbacks[t.name] = self.callbacks[t.name]
-                # remove trigger inputs from in_topics
+                # remove trigger inputs from self.callbacks
                 del self.callbacks[t.name]
 
         elif isinstance(trigger, Topic):

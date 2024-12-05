@@ -108,7 +108,10 @@ class LLM(ModelComponent):
             **kwargs,
         )
 
-    def activate(self):
+    def custom_on_configure(self):
+        # configure the rest
+        super().custom_on_configure()
+
         # add component prompt if set after init
         self.component_prompt = (
             get_prompt_template(self.config._component_prompt)
@@ -127,17 +130,14 @@ class LLM(ModelComponent):
             self.db_client.check_connection()
             self.db_client.initialize()
 
-        # activate the rest
-        super().activate()
-
-    def deactivate(self):
-        # deactivate the rest
-        super().deactivate()
-
+    def custom_on_deactivate(self):
         # deactivate db client
         if self.db_client:
             self.db_client.check_connection()
             self.db_client.deinitialize()
+
+        # deactivate the rest
+        super().custom_on_deactivate()
 
     @validate_func_args
     def add_documents(

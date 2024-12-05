@@ -86,9 +86,14 @@ class SpeechToText(ModelComponent):
             **kwargs,
         )
 
-    def activate(self):
+    def custom_on_activate(self):
+        """Custom activation"""
+        # NOTE: Custom activate to ensure creation of separate thread if VAD is enabled
+        # happens after activation as VAD starts sending received voice to execution
+        # step right away
+
         # Activate component
-        super().activate()
+        super().custom_on_activate()
 
         # If VAD is enabled, start a listening stream on a separate thread
         if self.config.enable_vad:
@@ -105,7 +110,7 @@ class SpeechToText(ModelComponent):
             )
             self.listening_thread = threading.Thread(target=self._process_audio).start()
 
-    def deactivate(self):
+    def custom_on_deactivate(self):
         # If VAD is enabled, stop the listening stream thread
         if self.config.enable_vad:
             self.event.set()
@@ -113,7 +118,7 @@ class SpeechToText(ModelComponent):
                 self.listening_thread.join()
 
         # Deactivate component
-        super().deactivate()
+        super().custom_on_deactivate()
 
     def _create_input(self, *_, **kwargs) -> Optional[Dict[str, Any]]:
         """Create inference input for SpeechToText models
@@ -151,7 +156,7 @@ class SpeechToText(ModelComponent):
         """
         assert frames == self.config.block_size
         if status:
-            self.get_logger().warn(f"{status}")
+            self.get_logger().warn(f"Status: {status}")
         try:
             import pyaudio
         except ModuleNotFoundError as e:

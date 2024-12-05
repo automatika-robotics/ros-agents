@@ -88,22 +88,22 @@ class TextToSpeech(ModelComponent):
             **kwargs,
         )
 
-    def activate(self):
-        # Activate component
-        super().activate()
+    def custom_on_configure(self):
+        # Configure component
+        super().custom_on_configure()
 
-        # If VAD is enabled, start a listening stream on a separate thread
+        # If play_on_device is enabled, start a playing stream on a separate thread
         if self.config.play_on_device:
             self.queue = queue.Queue(maxsize=self.config.buffer_size)
             self.event = threading.Event()
 
-    def deactivate(self):
+    def custom_on_deactivate(self):
         if self.config.play_on_device:
             # If play_on_device is enabled, stop the playing stream thread
             self.event.set()
 
         # Deactivate component
-        super().deactivate()
+        super().custom_on_deactivate()
 
     def _create_input(self, *_, **kwargs) -> Optional[Dict[str, Any]]:
         """Create inference input for TextToSpeech models
