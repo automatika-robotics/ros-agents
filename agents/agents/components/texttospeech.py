@@ -265,3 +265,25 @@ class TextToSpeech(ModelComponent):
             else:
                 # raise a fallback trigger via health status
                 self.health_status.set_failure()
+
+    def _warmup(self):
+        """Warm up and stat check"""
+        import time
+        from pathlib import Path
+
+        inference_input = {
+            "query": "Add the sum to the product of these three.",
+            **self.config._get_inference_params(),
+        }
+
+        # Run inference once to warm up and once to measure time
+        self.model_client.inference(inference_input)
+
+        start_time = time.time()
+        self.model_client.inference(inference_input)
+        elapsed_time = time.time() - start_time
+
+        self.get_logger().warning(f"Approximate Inference time: {elapsed_time} seconds")
+        self.get_logger().warning(
+            f"RTF: {elapsed_time / 2}"  # approx audio length, 2 seconds
+        )

@@ -522,3 +522,21 @@ class LLM(ModelComponent):
         if not self.db_client:
             return ""
         return json.dumps(self.db_client.serialize())
+
+    def _warmup(self):
+        """Warm up and stat check"""
+        import time
+
+        message = {"role": "user", "content": "Hello robot."}
+        inference_input = {"query": [message], **self.config._get_inference_params()}
+
+        # Run inference once to warm up and once to measure time
+        self.model_client.inference(inference_input)
+
+        inference_input = {"query": [message], **self.config._get_inference_params()}
+        start_time = time.time()
+        result = self.model_client.inference(inference_input)
+        elapsed_time = time.time() - start_time
+
+        self.get_logger().warning(f"Model Output: {result['output']}")
+        self.get_logger().warning(f"Approximate Inference time: {elapsed_time} seconds")

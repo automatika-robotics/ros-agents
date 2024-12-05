@@ -244,9 +244,9 @@ class Vision(ModelComponent):
 
         if (
             hasattr(self, "trig_callbacks")
-            and list(self.trig_callbacks.values())[0].get_output() is not None
+            and (image := list(self.trig_callbacks.values())[0].get_output())
+            is not None
         ):
-            image = list(self.trig_callbacks.values())[0].get_output()
             self.get_logger().warning("Got image input from trigger topic")
         else:
             self.get_logger().warning(
