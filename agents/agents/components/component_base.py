@@ -8,7 +8,7 @@ from ..ros import (
     ComponentRunType,
     FixedInput,
     SupportedType,
-    Topic,
+    BaseTopic as Topic,
 )
 from ..config import BaseComponentConfig
 
