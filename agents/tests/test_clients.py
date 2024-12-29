@@ -72,7 +72,7 @@ def ollama_client():
 @pytest.fixture
 def loaded_img():
     """Fixture to load test image"""
-    return cv2.imread("tests/resources/test.jpeg", cv2.COLOR_BGR2RGB)
+    return cv2.imread("agents/resources/test.jpeg", cv2.COLOR_BGR2RGB)
 
 
 @pytest.fixture

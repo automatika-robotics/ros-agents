@@ -88,22 +88,22 @@ class TextToSpeech(ModelComponent):
             **kwargs,
         )
 
-    def activate(self):
-        # Activate component
-        super().activate()
+    def custom_on_configure(self):
+        # Configure component
+        super().custom_on_configure()
 
-        # If VAD is enabled, start a listening stream on a separate thread
+        # If play_on_device is enabled, start a playing stream on a separate thread
         if self.config.play_on_device:
             self.queue = queue.Queue(maxsize=self.config.buffer_size)
             self.event = threading.Event()
 
-    def deactivate(self):
+    def custom_on_deactivate(self):
         if self.config.play_on_device:
             # If play_on_device is enabled, stop the playing stream thread
             self.event.set()
 
         # Deactivate component
-        super().deactivate()
+        super().custom_on_deactivate()
 
     def _create_input(self, *_, **kwargs) -> Optional[Dict[str, Any]]:
         """Create inference input for TextToSpeech models
@@ -248,21 +248,42 @@ class TextToSpeech(ModelComponent):
         # conduct inference
         if self.model_client:
             result = self.model_client.inference(inference_input)
-            # raise a fallback trigger via health status
-            if not result:
-                self.health_status.set_failure()
+            if result:
+                if self.config.play_on_device:
+                    # Stop any previous playback by setting event and clearing queue
+                    self.event.set()
+                    with self.queue.mutex:
+                        self.queue.queue.clear()
+                    # Start a new playback thread
+                    threading.Thread(
+                        target=self._playback_audio, args=(result.get("output"),)
+                    ).start()
+                # publish inference result
+                if hasattr(self, "publishers_dict"):
+                    for publisher in self.publishers_dict.values():
+                        publisher.publish(**result)
             else:
-                if result["output"]:
-                    if self.config.play_on_device:
-                        # Stop any previous playback by setting event and clearing queue
-                        self.event.set()
-                        with self.queue.mutex:
-                            self.queue.queue.clear()
-                        # Start a new playback thread
-                        threading.Thread(
-                            target=self._playback_audio, args=(result["output"],)
-                        ).start()
-                    # publish inference result
-                    if hasattr(self, "publishers_dict"):
-                        for publisher in self.publishers_dict.values():
-                            publisher.publish(**result)
+                # raise a fallback trigger via health status
+                self.health_status.set_failure()
+
+    def _warmup(self):
+        """Warm up and stat check"""
+        import time
+        from pathlib import Path
+
+        inference_input = {
+            "query": "Add the sum to the product of these three.",
+            **self.config._get_inference_params(),
+        }
+
+        # Run inference once to warm up and once to measure time
+        self.model_client.inference(inference_input)
+
+        start_time = time.time()
+        self.model_client.inference(inference_input)
+        elapsed_time = time.time() - start_time
+
+        self.get_logger().warning(f"Approximate Inference time: {elapsed_time} seconds")
+        self.get_logger().warning(
+            f"RTF: {elapsed_time / 2}"  # approx audio length, 2 seconds
+        )

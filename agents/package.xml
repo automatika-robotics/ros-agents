@@ -1,34 +1,31 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>agents</name>
+  <name>automatika_embodied_agents</name>
   <version>0.3.1</version>
   <description>agents</description>
   <maintainer email="contact@automatikarobotics.com">Automatika Robotics</maintainer>
-  <license>MIT License Copyright (c) 2024 Automatika Robotics</license>
+  <license>MIT</license>
 
-  <depend>rclpy</depend>
+  <depend>builtin_interfaces</depend>
   <depend>std_msgs</depend>
   <depend>sensor_msgs</depend>
+  <depend>automatika_ros_sugar</depend>
 
-  <depend>python3-pip</depend>
   <depend>python3-numpy</depend>
-  <depend>python3-pillow</depend>
   <depend>python3-opencv</depend>
   <depend>python3-jinja2</depend>
   <depend>python3-msgpack</depend>
-  <depend>python3-msgpack-numpy</depend>
-  <depend>python3-setproctitle</depend>
 
-  <build_depend>rosidl_default_generators</build_depend>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_python</buildtool_depend>
+  <buildtool_depend>rosidl_default_generators</buildtool_depend>
   <exec_depend>rosidl_default_runtime</exec_depend>
   <member_of_group>rosidl_interface_packages</member_of_group>
-
-  <exec_depend>agents_interfaces</exec_depend>
 
   <test_depend>python3-pytest</test_depend>
 
   <export>
-    <build_type>ament_python</build_type>
+    <build_type>ament_cmake</build_type>
   </export>
 </package>

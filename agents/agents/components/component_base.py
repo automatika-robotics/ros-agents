@@ -3,14 +3,7 @@ from abc import abstractmethod
 from copy import deepcopy
 from typing import Optional, Sequence, Union, List, Dict
 
-from ..callbacks import GenericCallback
-from ..ros import (
-    BaseComponent,
-    ComponentRunType,
-    FixedInput,
-    SupportedType,
-    Topic,
-)
+from ..ros import BaseComponent, ComponentRunType, FixedInput, SupportedType, Topic
 from ..config import BaseComponentConfig
 
 
@@ -35,10 +28,19 @@ class Component(BaseComponent):
 
         # setup inputs and outputs
         if inputs:
-            self.validate_topics(inputs)
+            self.validate_topics(
+                inputs,
+                allowed_topic_types=self.allowed_inputs,
+                topics_direction="Inputs",
+            )
 
         if outputs:
-            self.validate_topics(outputs)
+            if hasattr(self, "allowed_outputs"):
+                self.validate_topics(
+                    outputs,
+                    allowed_topic_types=self.allowed_outputs,
+                    topics_direction="Outputs",
+                )
 
         # Initialize Parent Component
         super().__init__(
@@ -54,43 +56,41 @@ class Component(BaseComponent):
         # setup component run type and triggers
         self.trigger(trigger)
 
-    def activate(self):
+    def custom_on_activate(self):
         """
-        Create required subscriptions, publications and timers.
+        Custom configuration for creating triggers.
         """
         # Setup trigger based callback or frequency based timer
         if self.run_type is ComponentRunType.EVENT:
-            self.create_all_triggers()
-
-        super().activate()
-
-    def __add_subscriber_to_callback(self, callback: GenericCallback) -> None:
-        # Creates subscriber and attaches it to input callback object
-        callback.set_node_name(self.node_name)
-        if hasattr(callback.input_topic, "fixed"):
-            self.get_logger().debug(
-                f"Fixed input specified for topic: {callback.input_topic} of type {callback.input_topic.msg_type}"
-            )
-        else:
-            callback.set_subscriber(self._add_ros_subscriber(callback))
+            self.activate_all_triggers()
 
     def create_all_subscribers(self):
         """
-        Override to handle fixed inputs
+        Override to handle trigger topics and fixed inputs.
+        Called by parent BaseComponent
         """
         self.get_logger().info("STARTING ALL SUBSCRIBERS")
-        # Create subscribers
-        for callback in self.callbacks.values():
-            self.__add_subscriber_to_callback(callback)
+        all_callbacks = (
+            list(self.callbacks.values()) + list(self.trig_callbacks.values())
+            if self.run_type is ComponentRunType.EVENT
+            else self.callbacks.values()
+        )
+        for callback in all_callbacks:
+            callback.set_node_name(self.node_name)
+            if hasattr(callback.input_topic, "fixed"):
+                self.get_logger().debug(
+                    f"Fixed input specified for topic: {callback.input_topic} of type {callback.input_topic.msg_type}"
+                )
+            else:
+                callback.set_subscriber(self._add_ros_subscriber(callback))
 
-    def create_all_triggers(self) -> None:
+    def activate_all_triggers(self) -> None:
         """
-        Creates component triggers for events specified as triggers
+        Activates component triggers by attaching execution step to callbacks
         """
-        self.get_logger().info("STARTING SUBSCRIBERS FOR TRIGGER TOPICS")
+        self.get_logger().info("ACTIVATING TRIGGER TOPICS")
         if hasattr(self, "trig_callbacks"):
             for callback in self.trig_callbacks.values():
-                self.__add_subscriber_to_callback(callback)
                 # Add execution step of the node as a post callback function
                 callback.on_callback_execute(self._execution_step)
 
@@ -100,9 +100,9 @@ class Component(BaseComponent):
         """
         self.get_logger().info("DESTROYING ALL SUBSCRIBERS")
         all_callbacks = (
-            self.callbacks.values()
-            if self.run_type is not ComponentRunType.EVENT
-            else list(self.callbacks.values()) + list(self.trig_callbacks.values())
+            list(self.callbacks.values()) + list(self.trig_callbacks.values())
+            if self.run_type is ComponentRunType.EVENT
+            else self.callbacks.values()
         )
         for callback in all_callbacks:
             if callback._subscriber:
@@ -122,7 +122,7 @@ class Component(BaseComponent):
             self.trig_callbacks = {}
             for t in trigger:
                 self.trig_callbacks[t.name] = self.callbacks[t.name]
-                # remove trigger inputs from in_topics
+                # remove trigger inputs from self.callbacks
                 del self.callbacks[t.name]
 
         elif isinstance(trigger, Topic):
@@ -144,7 +144,7 @@ class Component(BaseComponent):
     def validate_topics(
         self,
         topics: Sequence[Union[Topic, FixedInput]],
-        allowed_topics: Optional[Dict[str, List[type[SupportedType]]]] = None,
+        allowed_topic_types: Optional[Dict[str, List[type[SupportedType]]]] = None,
         topics_direction: str = "Topics",
     ):
         """
@@ -157,27 +157,38 @@ class Component(BaseComponent):
                 f"{topics_direction} to a component can only be of type Topic"
             )
 
-        # message type validation based on allowed types
-        if not allowed_topics:
+        # Check that only the allowed topics (or their subtypes) have been given
+        if not allowed_topic_types:
             return
 
-        all_msg_types = [topic.msg_type for topic in topics]
-        all_topics_types = allowed_topics["Required"] + (
-            allowed_topics.get("Optional") or []
+        all_msg_types = {topic.msg_type for topic in topics}
+        all_topic_types = allowed_topic_types["Required"] + (
+            allowed_topic_types.get("Optional") or []
         )
-        correct_topics = all(
-            allowed_t in all_msg_types for allowed_t in allowed_topics["Required"]
-        )
-        correct_msgtypes = all(
-            msg_type in all_topics_types for msg_type in all_msg_types
-        )
-        if not correct_topics:
+
+        if msg_type := next(
+            (
+                topic
+                for topic in all_msg_types
+                if not any(
+                    issubclass(topic, allowed_t) for allowed_t in all_topic_types
+                )
+            ),
+            None,
+        ):
             raise TypeError(
-                f"The component should be given at least one input of each datatype: {allowed_topics['Required']}"
+                f"{topics_direction} to the component of type {self.__class__.__name__} can only be of the allowed datatypes: {[topic.__name__ for topic in all_topic_types]} or their subclasses. A topic of type {msg_type.__name__} cannot be given to this component."
             )
-        if not correct_msgtypes:
+
+        # Check that all required topics (or subtypes) have been given
+        sufficient_topics = all(
+            any(issubclass(m_type, allowed_type) for m_type in all_msg_types)
+            for allowed_type in allowed_topic_types["Required"]
+        )
+
+        if not sufficient_topics:
             raise TypeError(
-                f"{topics_direction} to the component can only be of the allowed datatypes: {all_topics_types}"
+                f"{self.__class__.__name__} component {topics_direction} should have at least one topic of each datatype in the following list: {[topic.__name__ for topic in allowed_topic_types['Required']]}"
             )
 
     @abstractmethod

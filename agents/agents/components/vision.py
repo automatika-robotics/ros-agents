@@ -1,8 +1,20 @@
 from typing import Any, Union, Optional, List, Dict
+import queue
+import threading
+import numpy as np
+import cv2
 
 from ..clients.model_base import ModelClient
 from ..config import VisionConfig
-from ..ros import Detections, FixedInput, Image, Topic, Trackings
+from ..ros import (
+    Detections,
+    FixedInput,
+    Image,
+    Topic,
+    Trackings,
+    ROSImage,
+    ROSCompressedImage,
+)
 from ..utils import validate_func_args
 from .model_component import ModelComponent
 from .component_base import ComponentRunType
@@ -66,6 +78,8 @@ class Vision(ModelComponent):
         self.allowed_inputs = {"Required": [Image]}
         self.handled_outputs = [Detections, Trackings]
 
+        self._images: List[Union[np.ndarray, ROSImage, ROSCompressedImage]] = []
+
         super().__init__(
             inputs,
             outputs,
@@ -84,21 +98,97 @@ class Vision(ModelComponent):
         if hasattr(model_client, "_model") and self.model_client._model.setup_trackers:  # type: ignore
             model_client._model._num_trackers = len(inputs)
 
+    def custom_on_configure(self):
+        # configure parent component
+        super().custom_on_configure()
+
+        # create visualization thread if enabled
+        if self.config.enable_visualization:
+            self.queue = queue.Queue()
+            self.stop_event = threading.Event()
+            self.visualization_thread = threading.Thread(target=self._visualize).start()
+
+    def custom_on_deactivate(self):
+        # if visualization is enabled, shutdown the thread
+        if self.config.enable_visualization:
+            if self.visualization_thread:
+                self.stop_event.set()
+                self.visualization_thread.join()
+        # deactivate component
+        super().custom_on_deactivate()
+
+    def _visualize(self):
+        """CV2 based visualization of infereance results"""
+        cv2.namedWindow(self.node_name)
+
+        while not self.stop_event.is_set():
+            try:
+                # Add timeout to periodically check for stop event
+                data = self.queue.get(timeout=1)
+            except queue.Empty:
+                self.get_logger().warning(
+                    "Visualization queue is empty, waiting for new data..."
+                )
+                continue
+
+            # Only handle the first image and its output
+            image = cv2.cvtColor(
+                data["images"][0], cv2.COLOR_RGB2BGR
+            )  # as cv2 expects a BGR
+
+            bounding_boxes = data["output"][0].get("bboxes", [])
+            tracked_objects = data["output"][0].get("tracked_points", [])
+
+            for bbox in bounding_boxes:
+                # Assuming bbox format: (x1, y1, x2, y2)
+                cv2.rectangle(
+                    image,
+                    (int(bbox[0]), int(bbox[1])),
+                    (int(bbox[2]), int(bbox[3])),
+                    (0, 255, 0),
+                    2,
+                )
+
+            for point_list in tracked_objects:
+                # Each point_list is a list of points on one tracked object
+                for point in point_list:
+                    # Assuming point format: (x, y)
+                    cv2.circle(
+                        image,
+                        (int(point[0]), int(point[1])),
+                        radius=4,
+                        color=(0, 0, 255),
+                        thickness=-1,
+                    )
+
+            cv2.imshow(self.node_name, image)
+
+            if cv2.waitKey(1) & 0xFF == ord("q"):
+                self.get_logger().warning("User pressed 'q', stopping visualization.")
+                break
+
+        cv2.destroyAllWindows()
+
     def _create_input(self, *_, **kwargs) -> Optional[Dict[str, Any]]:
         """Create inference input for ObjectDetection models
         :param args:
         :param kwargs:
         :rtype: dict[str, Any]
         """
+        self._images = []
         # set one image topic as query for event based trigger
         if trigger := kwargs.get("topic"):
             images = [self.trig_callbacks[trigger.name].get_output()]
+            if msg := kwargs.get("msg"):
+                self._images.append(msg)
         else:
             images = []
 
             for i in self.callbacks.values():
                 if (item := i.get_output()) is not None:
                     images.append(item)
+                    if i.msg:
+                        self._images.append(i.msg)  # Collect all images for publishing
 
         if not images:
             return None
@@ -132,10 +222,51 @@ class Vision(ModelComponent):
         if self.model_client:
             result = self.model_client.inference(inference_input)
             # raise a fallback trigger via health status
-            if not result:
-                self.health_status.set_failure()
-            else:
+            if result:
                 # publish inference result
-                if result["output"] and hasattr(self, "publishers_dict"):
+                if hasattr(self, "publishers_dict"):
                     for publisher in self.publishers_dict.values():
-                        publisher.publish(**result)
+                        publisher.publish(
+                            **result,
+                            images=self._images,
+                            time_stamp=self.get_ros_time(),
+                        )
+                if self.config.enable_visualization:
+                    result["images"] = inference_input["images"]
+                    self.queue.put_nowait(result)
+            else:
+                self.health_status.set_failure()
+
+    def _warmup(self):
+        """Warm up and stat check"""
+        import time
+        from pathlib import Path
+
+        if (
+            hasattr(self, "trig_callbacks")
+            and (image := list(self.trig_callbacks.values())[0].get_output())
+            is not None
+        ):
+            self.get_logger().warning("Got image input from trigger topic")
+        else:
+            self.get_logger().warning(
+                "Did not get image input from trigger topic. Camera device might not be working and topic is not being published to, using a test image."
+            )
+            image = cv2.imread(
+                str(Path(__file__).parents[1] / Path("resources/test.jpeg"))
+            )
+
+        inference_input = {"images": [image], **self.config._get_inference_params()}
+
+        # Run inference once to warm up and once to measure time
+        self.model_client.inference(inference_input)
+
+        start_time = time.time()
+        result = self.model_client.inference(inference_input)
+        elapsed_time = time.time() - start_time
+
+        self.get_logger().warning(f"Model Output: {result}")
+        self.get_logger().warning(f"Approximate Inference time: {elapsed_time} seconds")
+        self.get_logger().warning(
+            f"Max throughput: {1 / elapsed_time} frames per second"
+        )

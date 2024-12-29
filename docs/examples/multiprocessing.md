@@ -3,7 +3,7 @@
 In the [last example](complete.md) we saw how we can make a complex graph of components to create an intelligent embodied agent. In this example we will have a look at some of the features that ROS Agents provides to make the same system robust and production-ready.
 
 ## Run Components in Separate Processes
-The first thing we want to do is to run each component in a different process. By default our launcher launches each component in a seperate thread, however ROS was designed such that each functional unit (a component in ROS Agents, that maps to a node in ROS) runs in a seperate process such that failure of one process does not crash the whole system. In order to enable multiprocessing we simply pass the name of our package, i.e. 'agents' and the multiprocessing parameter to our launcher as follows:
+The first thing we want to do is to run each component in a different process. By default our launcher launches each component in a seperate thread, however ROS was designed such that each functional unit (a component in ROS Agents, that maps to a node in ROS) runs in a seperate process such that failure of one process does not crash the whole system. In order to enable multiprocessing we simply pass the name of our ROS package, i.e. 'automatika_embodied_agents' and the multiprocessing parameter to our launcher as follows:
 
 ```python
 launcher = Launcher()
@@ -19,7 +19,7 @@ launcher.add_pkg(
         text_to_speech,
         vision
     ],
-    package_name="agents",
+    package_name="automatika_embodied_agents",
     multiprocessing=True
 )
 ```
@@ -266,7 +266,7 @@ launcher.add_pkg(
         text_to_speech,
         vision
     ]
-    package_name="agents",
+    package_name="automatika_embodied_agents",
     multiprocessing=True,
 )
 launcher.on_fail(action_name="restart")

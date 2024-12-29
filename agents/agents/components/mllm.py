@@ -117,7 +117,7 @@ class MLLM(LLM):
                 elif i.input_topic.msg_type is Detections:
                     context[i.input_topic.name] = item
                 # get images from image topics
-                if i.input_topic.msg_type == Image:
+                if issubclass(i.input_topic.msg_type, Image):
                     images.append(item)
 
         if not query or not images:
@@ -150,3 +150,33 @@ class MLLM(LLM):
             input["tools"] = self.config._tool_descriptions
 
         return input
+
+    def _warmup(self):
+        """Warm up and stat check"""
+        import time
+        from pathlib import Path
+        import cv2
+
+        image = cv2.imread(str(Path(__file__).parents[1] / Path("resources/test.jpeg")))
+
+        message = {"role": "user", "content": "What do you see?"}
+        inference_input = {
+            "query": [message],
+            "images": [image],
+            **self.config._get_inference_params(),
+        }
+
+        # Run inference once to warm up and once to measure time
+        self.model_client.inference(inference_input)
+
+        inference_input = {
+            "query": [message],
+            "images": [image],
+            **self.config._get_inference_params(),
+        }
+        start_time = time.time()
+        result = self.model_client.inference(inference_input)
+        elapsed_time = time.time() - start_time
+
+        self.get_logger().warning(f"Model Output: {result['output']}")
+        self.get_logger().warning(f"Approximate Inference time: {elapsed_time} seconds")

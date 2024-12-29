@@ -6,21 +6,19 @@ from attrs import define, field, Factory
 
 # FROM ROS_SUGAR
 from ros_sugar.supported_types import (
+    add_additional_datatypes,
     SupportedType,
     Audio,
     Image,
+    CompressedImage,
     OccupancyGrid,
     Odometry,
     String,
     ROSImage,
+    ROSCompressedImage,
 )
-from ros_sugar.io import (
-    get_all_msg_types,
-    get_msg_type,
-    Topic as BaseTopic,
-)
+from ros_sugar.io import Topic
 
-from ros_sugar.io.topic import _normalize_topic_name
 from ros_sugar.config import (
     BaseComponentConfig,
     ComponentRunType,
@@ -32,8 +30,8 @@ from ros_sugar import Launcher
 from ros_sugar.utils import component_action
 
 # LEIBNIZ TYPES
-from agents_interfaces.msg import Point2D, Bbox2D, Detection2D, Detections2D
-from agents_interfaces.msg import (
+from automatika_embodied_agents.msg import Point2D, Bbox2D, Detection2D, Detections2D
+from automatika_embodied_agents.msg import (
     Video as ROSVideo,
     Tracking as ROSTracking,
     Trackings as ROSTrackings,
@@ -44,6 +42,7 @@ __all__ = [
     "String",
     "Audio",
     "Image",
+    "CompressedImage",
     "OccupancyGrid",
     "Odometry",
     "Topic",
@@ -60,15 +59,6 @@ __all__ = [
 ]
 
 
-def get_msg_type_extra(
-    type_name: Union[type[SupportedType], str],
-) -> Union[type[SupportedType], str]:
-    """Closure around verification function in ros_sugar to provide additional types."""
-    return get_msg_type(
-        type_name, additional_types=[Video, Detection, Detections, Tracking, Trackings]
-    )
-
-
 class Video(SupportedType):
     """Video."""
 
@@ -76,14 +66,25 @@ class Video(SupportedType):
     callback = VideoCallback
 
     @classmethod
-    def convert(cls, output: Union[List[ROSImage], List[np.ndarray]], **_) -> ROSVideo:
+    def convert(
+        cls,
+        output: Union[List[ROSImage], List[ROSCompressedImage], List[np.ndarray]],
+        **_,
+    ) -> ROSVideo:
         """
-        Takes an list of images and retunrs a video message (Image Array)
+        Takes an list of images and returns a video message (Image Array)
         :return: Video
         """
-        frames = [Image.convert(frame) for frame in output]
         msg = ROSVideo()
+        frames = []
+        compressed_frames = []
+        for frame in output:
+            if isinstance(frame, ROSCompressedImage):
+                compressed_frames.append(CompressedImage.convert(frame))
+            else:
+                frames.append(Image.convert(frame))
         msg.frames = frames
+        msg.compressed_frames = compressed_frames
         return msg
 
 
@@ -94,7 +95,9 @@ class Detection(SupportedType):
     callback = None  # not defined
 
     @classmethod
-    def convert(cls, output: Dict, img: np.ndarray, **_) -> Detection2D:
+    def convert(
+        cls, output: Dict, img: Union[ROSImage, ROSCompressedImage, np.ndarray], **_
+    ) -> Detection2D:
         """
         Takes object detection data and converts it into a ROS message
         of type Detection2D
@@ -113,7 +116,10 @@ class Detection(SupportedType):
             boxes.append(box)
 
         msg.boxes = boxes
-        msg.image = Image.convert(img)
+        if isinstance(img, ROSCompressedImage):
+            msg.compressed_image = CompressedImage.convert(img)
+        else:
+            msg.image = Image.convert(img)
         return msg
 
 
@@ -142,10 +148,12 @@ class Tracking(SupportedType):
     """Tracking."""
 
     _ros_type = ROSTracking
-    callback = None  # Not defined
+    callback = None  # Not defined in ROS Agents
 
     @classmethod
-    def convert(cls, output: Dict, img: np.ndarray, **_) -> ROSTracking:
+    def convert(
+        cls, output: Dict, img: Union[ROSImage, ROSCompressedImage, np.ndarray], **_
+    ) -> ROSTracking:
         """
         Takes tracking data and converts it into a ROS message
         of type Tracking
@@ -154,26 +162,39 @@ class Tracking(SupportedType):
         msg = ROSTracking()
         msg.ids = output.get("ids") or []
         msg.labels = output.get("tracked_labels") or []
-        centroids = []
+
         estimated_velocities = []
-        # assumes centroids and estimated_velocities would be of equal length
-        if o_centroids := output.get("centroids") and (
-            o_estimated_velocities := output.get("estimated_velocities")
-        ):
-            for obj_centroids, obj_vels in zip(o_centroids, o_estimated_velocities):
-                for obj_instance_c, obj_instance_v in zip(obj_centroids, obj_vels):
-                    centroid = Point2D()
-                    centroid.x = obj_instance_c[0]
-                    centroid.y = obj_instance_c[1]
-                    centroids.append(centroid)
+        if o_estimated_velocities := output.get("estimated_velocities"):
+            for obj_vels in o_estimated_velocities:
+                for obj_instance_v in obj_vels:
                     estimated_velocity = Point2D()
                     estimated_velocity.x = obj_instance_v[0]
                     estimated_velocity.y = obj_instance_v[1]
                     estimated_velocities.append(estimated_velocity)
 
+        tracked_boxes = []
+        centroids = []
+        if o_tracked_points := output.get("tracked_points"):
+            for bbox in o_tracked_points:
+                # Each 3 points represent one object (top-left, bottom-right, center)
+                box = Bbox2D()
+                box.top_left_x = bbox[0][0]
+                box.top_left_y = bbox[0][1]
+                box.bottom_right_x = bbox[1][0]
+                box.bottom_right_y = bbox[1][1]
+                tracked_boxes.append(box)
+                centroid = Point2D()
+                centroid.x = bbox[2][0]
+                centroid.y = bbox[2][1]
+                centroids.append(centroid)
+
+        msg.boxes = tracked_boxes
         msg.centroids = centroids
         msg.estimated_velocities = estimated_velocities
-        msg.image = Image.convert(img)
+        if isinstance(img, ROSCompressedImage):
+            msg.compressed_image = CompressedImage.convert(img)
+        else:
+            msg.image = Image.convert(img)
         return msg
 
 
@@ -198,49 +219,14 @@ class Trackings(SupportedType):
         return msg
 
 
-@define(kw_only=True)
-class Topic(BaseTopic):
-    """
-    A topic is an idomatic wrapper for a ROS topic, which is essentially a pub/sub queue. Topics can be given as inputs or outputs to components. When given as inputs, components automatically create listeners for the topics upon their activation. And when given as outputs, components create publishers for publishing to the topic.
+agent_types = [Video, Detection, Detections, Tracking, Trackings]
 
-    :param name: Name of the topic
-    :type name: str
-    :param msg_type: One of the SupportedTypes. This parameter can be set by passing the SupportedType data-type name as a string
-    :type msg_type: Union[type[supported_types.SupportedType], str]
-    :param qos_profile: QoS profile for the topic
-    :type qos_profile: QoSConfig
 
-    Example usage:
-    ```python
-    position = Topic(name="odom", msg_type="Odometry")
-    map_meta_data = Topic(name="map_meta_data", msg_type="MapMetaData")
-    ```
-    """
-
-    name: str = field(converter=_normalize_topic_name)
-    msg_type: Union[type[SupportedType], str] = field(
-        converter=get_msg_type_extra,
-        validator=base_validators.in_(
-            get_all_msg_types(
-                additional_types=[Video, Detection, Detections, Tracking, Trackings]
-            )
-        ),
-    )
-    # qos_profile is configured in parent class
-    ros_msg_type: Any = field(init=False)
-
-    @msg_type.validator
-    def _update_ros_type(self, _, value):
-        """_update_ros_type.
-
-        :param _:
-        :param value:
-        """
-        self.ros_msg_type = value._ros_type
+add_additional_datatypes(agent_types)
 
 
 @define(kw_only=True)
-class FixedInput(BaseAttrs):
+class FixedInput(Topic):
     """
     A FixedInput can be provided to components as input and is similar to a Topic except components do not create a subscriber to it and whenever they _read_ it, they always get the same data. The nature of the data depends on the _msg_type_ specified.
 
@@ -260,15 +246,6 @@ class FixedInput(BaseAttrs):
     ```
     """
 
-    name: str = field(converter=_normalize_topic_name)
-    msg_type: Union[type[SupportedType], str] = field(
-        converter=get_msg_type_extra,
-        validator=base_validators.in_(
-            get_all_msg_types(
-                additional_types=[Video, Detection, Detections, Tracking, Trackings]
-            )
-        ),
-    )
     fixed: Any = field()
 
 

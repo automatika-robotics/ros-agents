@@ -39,9 +39,9 @@ class ModelComponent(Component):
             **kwargs,
         )
 
-    def activate(self):
+    def custom_on_configure(self):
         """
-        Create required subscriptions, publications, timers and initilize a model if provided.
+        Create model client if provided and initialize model.
         """
         self.get_logger().debug(f"Current Status: {self.health_status.value}")
 
@@ -53,17 +53,15 @@ class ModelComponent(Component):
         if self.model_client:
             self.model_client.check_connection()
             self.model_client.initialize()
+            try:
+                self._warmup()
+            except Exception as e:
+                self.get_logger().error(f"Error encountered in warmup: {e}")
 
-        # Activate component
-        super().activate()
-
-    def deactivate(self):
+    def custom_on_deactivate(self):
         """
-        Destroy all declared subscriptions, publications, timers, ... etc. to deactivate the node
+        Destroy model client if it exists
         """
-        # deactivate component
-        super().deactivate()
-
         # Deinitialize model
         if self.model_client:
             self.model_client.check_connection()
@@ -92,7 +90,7 @@ class ModelComponent(Component):
         :rtype: dict[str, Any] | None
         """
         raise NotImplementedError(
-            "This method needs to be implemented by child components."
+            "_create_input method needs to be implemented by child components."
         )
 
     @abstractmethod
@@ -103,7 +101,18 @@ class ModelComponent(Component):
         :param kwargs:
         """
         raise NotImplementedError(
-            "This method needs to be implemented by child components."
+            "_execution_step method needs to be implemented by child components."
+        )
+
+    @abstractmethod
+    def _warmup(self, *args, **kwargs):
+        """_warmup.
+
+        :param args:
+        :param kwargs:
+        """
+        raise NotImplementedError(
+            "_warmup method needs to be implemented by child components."
         )
 
     def _update_cmd_args_list(self):

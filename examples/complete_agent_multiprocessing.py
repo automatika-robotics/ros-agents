@@ -263,7 +263,7 @@ launcher.add_pkg(
         text_to_speech,
         vision,
     ],
-    package_name="agents",
+    package_name="automatika_embodied_agents",
     multiprocessing=True,
 )
 launcher.on_fail(action_name="restart")

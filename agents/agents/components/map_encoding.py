@@ -94,26 +94,24 @@ class MapEncoding(Component):
         # create layers
         self._layers(layers)
 
-    def activate(self):
-        """activate."""
+    def custom_on_configure(self):
+        """configure."""
         self.get_logger().debug(f"Current Status: {self.health_status.value}")
+
+        # configure the rest
+        super().custom_on_configure()
+
         # initialize db client
         self.db_client.check_connection()
         self.db_client.initialize()
-
-        # activate the rest
-        super().activate()
 
         # fill out pre-defined points in layers
         for layer in self.layers_dict.values():
             if layer.pre_defined and len(layer.pre_defined) > 0:
                 self._fill_out_pre_defined(layer, layer.pre_defined)
 
-    def deactivate(self):
+    def custom_on_deactivate(self):
         """deactivate."""
-        # deactivate the rest
-        super().deactivate()
-
         # deactivate db client
         self.db_client.check_connection()
         self.db_client.deinitialize()

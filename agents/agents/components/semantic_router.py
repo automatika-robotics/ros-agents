@@ -109,22 +109,20 @@ class SemanticRouter(Component):
                 raise TypeError("default_route must be one of the specified routes")
             self.default_route = self.config._default_route = default_route
 
-    def activate(self):
+    def custom_on_configure(self):
         self.get_logger().debug(f"Current Status: {self.health_status.value}")
+
+        # configure the rest
+        super().custom_on_configure()
+
         # initialize db client
         self.db_client.check_connection()
         self.db_client.initialize()
-
-        # activate the rest
-        super().activate()
 
         # initialize routes
         self._initialize_routes()
 
     def deactivate(self):
-        # deactivate the rest
-        super().deactivate()
-
         # deactivate db client
         self.db_client.check_connection()
         self.db_client.deinitialize()
@@ -176,8 +174,9 @@ class SemanticRouter(Component):
                 else result["output"]["metadatas"][0][0]["route_name"]
             )
 
-            if self.publishers_dict:
-                self.publishers_dict[route].publish(trigger_query)
+            self.publishers_dict[route].publish(trigger_query)
+        else:
+            self.health_status.set_failure()
 
     def _routes(self, routes: List[Route]):
         """
