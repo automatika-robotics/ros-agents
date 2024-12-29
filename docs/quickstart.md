@@ -1,6 +1,6 @@
 # Quick Start 🚀
 
-Unlike other ROS package, ROS Agents provides a pure pythonic way of describing the node graph using [ROS Sugar](https://www.github.com/automatika-robotics/ros-sugar). Copy the following code in a python script and run it.
+Unlike other ROS package, ROS Agents provides a pure pythonic way of describing the node graph using [ROS Sugar](https://automatika-robotics.github.io/ros-sugar/). Copy the following code in a python script and run it.
 
 ```python
 from agents.clients.ollama import OllamaClient

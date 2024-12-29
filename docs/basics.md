@@ -7,7 +7,7 @@ The following is an overview of basic building blocks of ROS Agents. You can fol
 A Component is the main execution unit in ROS Agents and in essence each component is synctactic sugar over a ROS2 Lifecycle Node. All the functionalities implemented in ROS2 nodes can be found in the component. Components take a single Topic or a list of Topics as inputs and ouputs. Depending on the components functionality, certain types of Topics might be mandatory.
 
 ```{note}
-To learn more about components, checkout [ROS Sugar Documentation](https://github.com/automatika-robotics/ros-sugar).
+To learn more about components, checkout [ROS Sugar Documentation](https://automatika-robotics.github.io/ros-sugar/).
 ```
 
 ### Components Available in ROS Agents
@@ -32,14 +32,14 @@ In ROS Agents, components can be of the following two types:
 
 ### Health Check and Fallback
 
-Each component maintains a health status, based on which, one can configure various fallback options for the component allowing it to recover from failures or shutdown gracefully. This aspect can be significant in embodied autonomous agents, not just in terms of safety but for generally coherent and reliable performance. To learn more about these topics, check out the documentation of [ROS Sugar Documentation](https://github.com/automatika-robotics/ros-sugar).
+Each component maintains a health status, based on which, one can configure various fallback options for the component allowing it to recover from failures or shutdown gracefully. This aspect can be significant in embodied autonomous agents, not just in terms of safety but for generally coherent and reliable performance. To learn more about these topics, check out the documentation of [ROS Sugar Documentation](https://automatika-robotics.github.io/ros-sugar/).
 
 ## Topic
 
-A topic is an idomatic wrapper for a ROS topic, which is essentially a pub/sub queue. Topics can be given as inputs or outputs to components. When given as inputs, components automatically create listeners for the topics upon their activation. And when given as outputs, components create publishers for publishing to the topic. Each topic has a name (duh?) and a data type, defining its listening callback and publishing behavior. The data type can be provided to the topic as a string. Checkout the list of supported data types [here](apidocs/agents/agents.ros).
+A topic is an idomatic wrapper for a ROS topic, which is essentially a pub/sub queue. Topics can be given as inputs or outputs to components. When given as inputs, components automatically create listeners for the topics upon their activation. And when given as outputs, components create publishers for publishing to the topic. Each topic has a name (duh?) and a data type, defining its listening callback and publishing behavior. The data type can be provided to the topic as a string. Checkout the list of supported data types [here](https://automatika-robotics.github.io/ros-sugar/advanced/types.html).
 
 ```{note}
-Learn more about Topics in [ROS Sugar](https://github.com/automatika-robotics/ros-sugar).
+Learn more about Topics in [ROS Sugar](https://automatika-robotics.github.io/ros-sugar/).
 ```
 
 ## Model/DB Client
