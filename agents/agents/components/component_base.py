@@ -3,13 +3,7 @@ from abc import abstractmethod
 from copy import deepcopy
 from typing import Optional, Sequence, Union, List, Dict
 
-from ..ros import (
-    BaseComponent,
-    ComponentRunType,
-    FixedInput,
-    SupportedType,
-    BaseTopic as Topic,
-)
+from ..ros import BaseComponent, ComponentRunType, FixedInput, SupportedType, Topic
 from ..config import BaseComponentConfig
 
 
