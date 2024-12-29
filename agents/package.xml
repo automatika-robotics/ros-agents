@@ -10,15 +10,12 @@
   <depend>builtin_interfaces</depend>
   <depend>std_msgs</depend>
   <depend>sensor_msgs</depend>
+  <depend>automatika_ros_sugar</depend>
 
-  <depend>python3-pip</depend>
   <depend>python3-numpy</depend>
-  <depend>python3-pillow</depend>
   <depend>python3-opencv</depend>
   <depend>python3-jinja2</depend>
   <depend>python3-msgpack</depend>
-  <depend>python3-msgpack-numpy</depend>
-  <depend>python3-setproctitle</depend>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
   <buildtool_depend>ament_cmake_python</buildtool_depend>
