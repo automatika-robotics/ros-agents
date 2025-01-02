@@ -12,11 +12,6 @@
   <depend>sensor_msgs</depend>
   <depend>automatika_ros_sugar</depend>
 
-  <depend>python3-numpy</depend>
-  <depend>python3-opencv</depend>
-  <depend>python3-jinja2</depend>
-  <depend>python3-msgpack</depend>
-
   <buildtool_depend>ament_cmake</buildtool_depend>
   <buildtool_depend>ament_cmake_python</buildtool_depend>
   <buildtool_depend>rosidl_default_generators</buildtool_depend>
