@@ -77,5 +77,11 @@ html_theme_options = {
     "logo": {
         "image_light": "_static/ROS_AGENTS_DARK.png",
         "image_dark": "_static/ROS_AGENTS.png",
-    }
+    },
+    "path_to_docs": "docs",
+    "repository_url": "https://github.com/automatika-robotics/ros-agents",
+    "repository_branch": "main",
+    "use_source_button": True,
+    "use_issues_button": True,
+    "use_edit_page_button": True,
 }
