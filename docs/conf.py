@@ -69,6 +69,10 @@ myst_enable_extensions = [
     "substitution",
     "tasklist",
 ]
+language = "en"
+myst_html_meta = {
+    "google-site-verification": "cQVj-BaADcGVOGB7GOvfbkgJjxni10C2fYWCZ03jOeo"
+}
 
 
 html_theme = "sphinx_book_theme"  # install with `pip install sphinx-book-theme`
