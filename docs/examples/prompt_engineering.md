@@ -19,10 +19,10 @@ detections_topic = Topic(name="detections", msg_type="Detections")
 Additionally the component requiers a model client with an object detection model. We will use the RESP client for RoboML and use the VisionModel a convenient model class made available in ROS Agents, for initializing all vision models available in the opensource [mmdetection](https://github.com/open-mmlab/mmdetection) library. We will specify the model we want to use by specifying the checkpoint attribute.
 
 ```{note}
-Learn about setting up RoboML with vision [here](https://www.github.com/automatika-robotics/roboml).
+Learn about setting up RoboML with vision [here](https://github.com/automatika-robotics/roboml/blob/main/README.md#for-vision-models-support).
 ```
 ```{seealso}
-Checkout all available mmdetection models and their benchmarking results in the [mmdetection model zoo](https://www.github.com/automatika-robotics/roboml).
+Checkout all available mmdetection models and their benchmarking results in the [mmdetection model zoo](https://github.com/open-mmlab/mmdetection?tab=readme-ov-file#overview-of-benchmark-and-model-zoo).
 ```
 
 ```python
