@@ -124,7 +124,7 @@ class MLLM(LLM):
             return None
 
         # get RAG results if enabled in config and if docs retreived
-        rag_result = self._handle_rag_query(query)
+        rag_result = self._handle_rag_query(query) if self.config.enable_rag else None
 
         # set system prompt template
         query = (

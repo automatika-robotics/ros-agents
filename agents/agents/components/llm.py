@@ -178,9 +178,6 @@ class LLM(ModelComponent):
         :type query: str
         :rtype: str | None
         """
-        if not self.config.enable_rag:
-            return None
-
         if not self.db_client:
             raise AttributeError(
                 "db_client needs to be set in component for RAG to work"
@@ -208,16 +205,15 @@ class LLM(ModelComponent):
 
     def _handle_chat_history(self, message: Dict) -> None:
         """Internal handler for chat history"""
-        if self.config.chat_history:
+        if not self.config.chat_history:
+            self.messages = [message]
+        else:
             self.messages.append(message)
 
             # if the size of history exceeds specified size than take out first
             # two messages
             if len(self.messages) / 2 > self.config.history_size:
                 self.messages = self.messages[2:]
-        else:
-            self.messages = []
-            self.messages.append(message)
 
     def _handle_tool_calls(self, result: Dict) -> Optional[Dict]:
         """Internal handler for tool calling"""
@@ -321,7 +317,7 @@ class LLM(ModelComponent):
             return None
 
         # get RAG results if enabled in config and if docs retreived
-        rag_result = self._handle_rag_query(query)
+        rag_result = self._handle_rag_query(query) if self.config.enable_rag else None
 
         # set system prompt template
         query = (
