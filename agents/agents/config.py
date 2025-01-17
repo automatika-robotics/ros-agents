@@ -19,7 +19,12 @@ __all__ = [
 
 
 @define(kw_only=True)
-class LLMConfig(BaseComponentConfig):
+class ModelComponentConfig(BaseComponentConfig):
+    warmup: Optional[bool] = field(default=False)
+
+
+@define(kw_only=True)
+class LLMConfig(ModelComponentConfig):
     """
     Configuration for the Large Language Model (LLM) component.
 
@@ -125,7 +130,7 @@ class MLLMConfig(LLMConfig):
 
 
 @define(kw_only=True)
-class VisionConfig(BaseComponentConfig):
+class VisionConfig(ModelComponentConfig):
     """Configuration for a detection component.
 
     The config allows you to customize the detection and/or tracking process.
@@ -162,7 +167,7 @@ class VisionConfig(BaseComponentConfig):
 
 
 @define(kw_only=True)
-class TextToSpeechConfig(BaseComponentConfig):
+class TextToSpeechConfig(ModelComponentConfig):
     """Configuration for a Text-To-Speech component.
 
     This class defines the configuration options for a Text-To-Speech component.
@@ -198,7 +203,7 @@ class TextToSpeechConfig(BaseComponentConfig):
 
 
 @define(kw_only=True)
-class SpeechToTextConfig(BaseComponentConfig):
+class SpeechToTextConfig(ModelComponentConfig):
     """
     Configuration for a Speech-To-Text component.
 
@@ -246,7 +251,7 @@ class SpeechToTextConfig(BaseComponentConfig):
     block_size: int = field(init=False)
 
     def __attrs_post_init__(self):
-        self.block_size = 512 if self.sample_rate == 16000 else 256
+        self.block_size = 640 if self.sample_rate == 16000 else 320
 
     def _get_inference_params(self) -> Dict:
         """get_inference_params.

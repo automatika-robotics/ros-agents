@@ -4,7 +4,7 @@ import json
 from typing import Any, Optional, Sequence, Union, List, Dict
 
 from ..clients.model_base import ModelClient
-from ..config import BaseComponentConfig
+from ..config import ModelComponentConfig
 from ..ros import FixedInput, Topic, SupportedType
 from .component_base import Component
 
@@ -17,7 +17,7 @@ class ModelComponent(Component):
         inputs: Optional[Sequence[Union[Topic, FixedInput]]] = None,
         outputs: Optional[Sequence[Topic]] = None,
         model_client: Optional[ModelClient] = None,
-        config: Optional[BaseComponentConfig] = None,
+        config: Optional[ModelComponentConfig] = None,
         trigger: Union[Topic, List[Topic], float] = 1.0,
         callback_group=None,
         component_name: str = "model_component",
@@ -27,6 +27,9 @@ class ModelComponent(Component):
         self.model_client = model_client if model_client else None
 
         self.handled_outputs: List[type[SupportedType]]
+
+        if not config:
+            self.config = ModelComponentConfig()
 
         # Initialize Component
         super().__init__(
@@ -53,10 +56,11 @@ class ModelComponent(Component):
         if self.model_client:
             self.model_client.check_connection()
             self.model_client.initialize()
-            try:
-                self._warmup()
-            except Exception as e:
-                self.get_logger().error(f"Error encountered in warmup: {e}")
+            if self.config.warmup:
+                try:
+                    self._warmup()
+                except Exception as e:
+                    self.get_logger().error(f"Error encountered in warmup: {e}")
 
     def custom_on_deactivate(self):
         """
@@ -80,6 +84,16 @@ class ModelComponent(Component):
                     func_body = inspect.getsource(pub.output_topic.msg_type.convert)
                     raise TypeError(f"""{type(self).__name__} components can only handle output topics of type(s) {self.handled_outputs} automatically. Topic {name} is of type {pub.output_topic.msg_type}. EITHER provide a pre-processing function for this topic and attach it to the topic by calling the `add_publisher_preprocessor` on the component {self.node_name} OR provide a tool call that can provide structured inference output and attach it by calling `register_tool` on {self.node_name}. Make sure the output can be passed as parameter `output` to the following function:
 {func_body}""")
+
+    @property
+    def warmup(self) -> bool:
+        """Enable warmup of the model."""
+        return self.config.warmup
+
+    @warmup.setter
+    def warmup(self, value: bool) -> None:
+        """Enable warmup of the model."""
+        self.config.warmup = value
 
     @abstractmethod
     def _create_input(self, *args, **kwargs) -> Union[Dict[str, Any], None]:
