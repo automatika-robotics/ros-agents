@@ -57,7 +57,12 @@ def get_prompt_template(template: Union[str, Path]) -> Template:
     :type template: str | Path
     :rtype: None
     """
-    if Path(template).exists():
+    # check if prompt is a filename
+    try:
+        path_exists = Path(template).exists()
+    except OSError:
+        path_exists = False
+    if path_exists:
         try:
             env = Environment(
                 loader=FileSystemLoader(Path(template).parent), autoescape=True
