@@ -18,10 +18,13 @@ from typing import (
 )
 
 import cv2
+import httpx
 import numpy as np
 from attrs import Attribute
 from jinja2 import Environment, FileSystemLoader
 from jinja2.environment import Template
+from tqdm import tqdm
+from platformdirs import user_cache_dir
 from .pluralize import pluralize
 
 
@@ -200,6 +203,31 @@ class VADStatus(Enum):
 
     START = 0
     END = 1
+
+
+def load_model(model_name: str, url: str) -> str:
+    cachedir = user_cache_dir("ros_agents")
+    model_path = Path(cachedir) / Path("models") / Path(f"{model_name}.onnx")
+
+    # create cache dir
+    model_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if model_path.is_file():
+        return str(model_path)
+    else:
+        with httpx.stream("GET", url, timeout=20) as r:
+            r.raise_for_status()
+            total_size = int(r.headers.get("content-length", 0))
+            progress_bar = tqdm(
+                total=total_size, unit="iB", unit_scale=True, desc=f"{model_name}"
+            )
+            with open(model_path, "wb") as f:
+                for chunk in r.iter_bytes(chunk_size=1024):
+                    f.write(chunk)
+                    progress_bar.update(len(chunk))
+
+    progress_bar.close()
+    return str(model_path)
 
 
 class PDFReader:
