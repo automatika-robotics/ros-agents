@@ -9,7 +9,7 @@ title: ROS Agents Documentation
 ## Table of Contents
 
 ```{toctree}
-:maxdepth: 1
+:maxdepth: 2
 
 intro
 installation
