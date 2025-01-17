@@ -23,7 +23,7 @@ text_query = Topic(name="text0", msg_type="String")
 s2t_config = SpeechToTextConfig(enable_vad=True)  # option to always listen for speech through the microphone
 ```
 ```{note}
-With **enable_vad** set to **True**, the component automatically deploys [Silero-VAD](https://github.com/snakers4/silero-vad) by default in ONNX format. This model has a small footprint and can be easily deployed on the edge. However we need to install a couple of dependencies for this to work. These can be installed with: `pip install pyaudio torchaudio onnxruntime`
+With **enable_vad** set to **True**, the component automatically deploys [Silero-VAD](https://github.com/snakers4/silero-vad) by default in ONNX format. This model has a small footprint and can be easily deployed on the edge. However we need to install a couple of dependencies for this to work. These can be installed with: `pip install pyaudio onnxruntime`
 ```
 
 To initialize the component we also need a model client for a speech to text model. We will be using the HTTP client for RoboML for this purpose.
