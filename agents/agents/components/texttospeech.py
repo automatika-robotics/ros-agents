@@ -233,10 +233,10 @@ class TextToSpeech(ModelComponent):
             trigger = kwargs.get("topic")
             if not trigger:
                 return
-            self.get_logger().info(f"Received trigger on topic {trigger.name}")
+            self.get_logger().debug(f"Received trigger on topic {trigger.name}")
         else:
             time_stamp = self.get_ros_time().sec
-            self.get_logger().info(f"Sending at {time_stamp}")
+            self.get_logger().debug(f"Sending at {time_stamp}")
 
         # create inference input
         inference_input = self._create_input(*args, **kwargs)
@@ -269,7 +269,6 @@ class TextToSpeech(ModelComponent):
     def _warmup(self):
         """Warm up and stat check"""
         import time
-        from pathlib import Path
 
         inference_input = {
             "query": "Add the sum to the product of these three.",

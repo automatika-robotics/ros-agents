@@ -161,7 +161,7 @@ class VideoMessageMaker(Component):
             and (not self._capture)
             and len(self._frames) >= self.config.min_video_frames
         ):
-            self.get_logger().info(f"Sending out video of {len(self._frames)} frames")
+            self.get_logger().debug(f"Sending out video of {len(self._frames)} frames")
             for publisher in self.publishers_dict.values():
                 publisher.publish(output=self._frames)
             self._frames = []

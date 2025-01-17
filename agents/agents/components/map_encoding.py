@@ -243,9 +243,9 @@ class MapEncoding(Component):
             trigger = kwargs.get("topic")
             if not trigger:
                 return
-            self.get_logger().info(f"Received trigger of {trigger.name}")
+            self.get_logger().debug(f"Received trigger of {trigger.name}")
         else:
-            self.get_logger().info(f"Sending at {time_stamp}")
+            self.get_logger().debug(f"Sending at {time_stamp}")
 
         # process position and meta data inputs
         position = self.callbacks[self.position.name].get_output()

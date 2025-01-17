@@ -153,7 +153,7 @@ class SemanticRouter(Component):
         if not trigger:
             return
 
-        self.get_logger().info(f"Received trigger on {trigger.name}")
+        self.get_logger().debug(f"Received trigger on {trigger.name}")
         trigger_query = self.trig_callbacks[trigger.name].get_output()
         # get route
         db_input = {
