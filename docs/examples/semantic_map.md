@@ -150,6 +150,7 @@ map = MapEncoding(
     config=map_conf,
     db_client=chroma_client,
     trigger=15.0,  # map layer data is stored every 15 seconds
+    component_name="map_encoding",
 )
 ```
 
@@ -258,6 +259,7 @@ map = MapEncoding(
     config=map_conf,
     db_client=chroma_client,
     trigger=15.0,
+    component_name="map_encoding",
 )
 
 # Launch the components

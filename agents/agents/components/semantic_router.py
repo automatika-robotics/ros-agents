@@ -69,6 +69,7 @@ class SemanticRouter(Component):
         default_route=None,
         config=config,
         db_client=db_client
+        component_name = "router"
     )
     ```
     """
@@ -82,8 +83,8 @@ class SemanticRouter(Component):
         config: SemanticRouterConfig,
         db_client: DBClient,
         default_route: Optional[Route] = None,
+        component_name: str,
         callback_group=None,
-        component_name: str = "router_component",
         **kwargs,
     ):
         self.config: SemanticRouterConfig = config

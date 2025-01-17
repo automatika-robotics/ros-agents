@@ -121,6 +121,7 @@ router = SemanticRouter(
     default_route=llm_route,  # If none of the routes fall within a distance threshold
     config=router_config,
     db_client=chroma_client,  # reusing the db_client from the previous example
+    component_name="router"
 )
 ```
 
@@ -228,6 +229,7 @@ router = SemanticRouter(
     default_route=llm_route,  # If none of the routes fall within a distance threshold
     config=router_config,
     db_client=chroma_client,  # reusing the db_client from the previous example
+    component_name="router",
 )
 
 # Launch the components

@@ -52,6 +52,7 @@ class MapEncoding(Component):
         map_topic=map_topic,
         config=config,
         db_client=db_client,
+        component_name="semantic_map"
     )
     ```
     """
@@ -66,8 +67,8 @@ class MapEncoding(Component):
         config: MapConfig,
         db_client: DBClient,
         trigger: Union[Topic, List[Topic], float] = 10.0,
+        component_name: str,
         callback_group=None,
-        component_name="map_encoder_component",
         **kwargs,
     ):
         self.config: MapConfig = config

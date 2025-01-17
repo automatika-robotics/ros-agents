@@ -19,6 +19,7 @@ speech_to_text = SpeechToText(
     config=SpeechToTextConfig(
         enable_vad=True
     ),  # option to always listen for speech through the microphone
+    component_name="speech_to_text",
 )
 
 image0 = Topic(name="image_raw", msg_type="Image")
@@ -45,6 +46,7 @@ text_to_speech = TextToSpeech(
     trigger=text_answer,
     model_client=roboml_speecht5,
     config=t2s_config,
+    component_name="text_to_speech",
 )
 
 launcher = Launcher()

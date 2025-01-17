@@ -73,8 +73,8 @@ class LLM(ModelComponent):
         config: Optional[LLMConfig] = None,
         db_client: Optional[DBClient] = None,
         trigger: Union[Topic, List[Topic], float] = 1.0,
+        component_name: str,
         callback_group=None,
-        component_name: str = "llm_component",
         **kwargs,
     ):
         self.config: LLMConfig = config or LLMConfig()

@@ -44,6 +44,7 @@ class VideoMessageMaker(Component):
         inputs=[image_topic],
         outputs=[video_topic],
         config=config,
+        component_name="video_message_maker",
     )
     ```
     """
@@ -56,8 +57,8 @@ class VideoMessageMaker(Component):
         outputs: List[Topic],
         config: Optional[VideoMessageMakerConfig] = None,
         trigger: Union[Topic, List[Topic]],
+        component_name: str,
         callback_group=None,
-        component_name: str = "video_maker_component",
         **kwargs,
     ):
         if isinstance(trigger, float):

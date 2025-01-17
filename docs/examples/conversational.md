@@ -48,7 +48,8 @@ speech_to_text = SpeechToText(
     outputs=[text_query], # the output topic we setup
     model_client=roboml_whisper,
     trigger=audio_in,
-    config=s2t_config  # pass in the config object
+    config=s2t_config,  # pass in the config object
+    component_name="speech_to_text"
 )
 ```
 The trigger parameter lets the component know that it has to perform its function (in this case model inference) when an input is received on this particular topic. In our configuration, the component will be triggered using voice activity detection on the continuous stream of audio being received on the microphone. Next we will setup our MLLM component.
@@ -113,7 +114,8 @@ text_to_speech = TextToSpeech(
     inputs=[text_answer],
     trigger=text_answer,
     model_client=roboml_speecht5,
-    config=t2s_config
+    config=t2s_config,
+    component_name="text_to_speech"
 )
 ```
 ## Launching the Components
@@ -153,7 +155,8 @@ speech_to_text = SpeechToText(
     outputs=[text_query],
     model_client=roboml_whisper,
     trigger=audio_in,
-    config=SpeechToTextConfig(enable_vad=True)  # option to always listen for speech through the microphone
+    config=SpeechToTextConfig(enable_vad=True),  # option to always listen for speech through the microphone
+    component_name="speech_to_text"
 )
 
 image0 = Topic(name="image_raw", msg_type="Image")
@@ -179,7 +182,8 @@ text_to_speech = TextToSpeech(
     inputs=[text_answer],
     trigger=text_answer,
     model_client=roboml_speecht5,
-    config=t2s_config
+    config=t2s_config,
+    component_name="text_to_speech"
 )
 
 launcher = Launcher()

@@ -64,8 +64,8 @@ class TextToSpeech(ModelComponent):
         model_client: ModelClient,
         config: Optional[TextToSpeechConfig] = None,
         trigger: Union[Topic, List[Topic]],
+        component_name: str,
         callback_group=None,
-        component_name: str = "texttospeech_component",
         **kwargs,
     ):
         self.config: TextToSpeechConfig = config or TextToSpeechConfig()

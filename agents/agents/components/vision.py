@@ -57,6 +57,7 @@ class Vision(ModelComponent):
         outputs=[detections_topic],
         model_client=model_client
         config=config,
+        component_name = "vision_component"
     )
     ```
     """
@@ -70,8 +71,8 @@ class Vision(ModelComponent):
         model_client: ModelClient,
         config: Optional[VisionConfig] = None,
         trigger: Union[Topic, List[Topic], float] = 1.0,
+        component_name: str,
         callback_group=None,
-        component_name: str = "vision_component",
         **kwargs,
     ):
         self.config: VisionConfig = config or VisionConfig()
