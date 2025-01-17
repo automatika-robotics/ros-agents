@@ -97,16 +97,15 @@ class SpeechToText(ModelComponent):
 
         # If VAD is enabled, start a listening stream on a separate thread
         if self.config.enable_vad:
-            from ..utils.vad import VADIterator, model
+            from ..utils.vad import VADIterator
 
             self.event = threading.Event()
             self.queue = queue.Queue()
             self.vad_iterator = VADIterator(
-                model,
-                self.config.threshold,
-                self.config.sample_rate,
-                self.config.min_silence_duration_ms,
-                self.config.speech_pad_ms,
+                threshold=self.config.threshold,
+                sample_rate=self.config.sample_rate,
+                min_silence_duration_ms=self.config.min_silence_duration_ms,
+                speech_pad_ms=self.config.speech_pad_ms,
             )
             self.listening_thread = threading.Thread(target=self._process_audio).start()
 
@@ -218,16 +217,16 @@ class SpeechToText(ModelComponent):
         """
         # Check for vad before checking for triggers
         if self.config.enable_vad and kwargs.get("vad"):
-            self.get_logger().info("Received speech from vad")
+            self.get_logger().debug("Received speech from vad")
             kwargs["vad"] = self.vad_iterator.get_chunks()
         elif self.run_type is ComponentRunType.EVENT:
             trigger = kwargs.get("topic")
             if not trigger:
                 return
-            self.get_logger().info(f"Received trigger on topic {trigger.name}")
+            self.get_logger().debug(f"Received trigger on topic {trigger.name}")
         else:
             time_stamp = self.get_ros_time().sec
-            self.get_logger().info(f"Sending at {time_stamp}")
+            self.get_logger().debug(f"Sending at {time_stamp}")
 
         # create inference input
         inference_input = self._create_input(*args, **kwargs)

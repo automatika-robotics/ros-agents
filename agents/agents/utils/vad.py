@@ -1,16 +1,16 @@
 from typing import Optional
 import numpy as np
-from .utils import VADStatus
+from .utils import VADStatus, load_model
 
 try:
-    import torch
+    import onnxruntime as ort
 except ModuleNotFoundError as e:
     raise ModuleNotFoundError(
-        "VAD in SpeechToText components requires torchaudio and onnxruntime to be installed. Please install them with `pip install torchaudio onnxruntime`"
+        "VAD in SpeechToText components requires onnxruntime to be installed. Please install them with `pip install onnxruntime`"
     ) from e
 
 # VAD Model Singleton
-model, _ = torch.hub.load("snakers4/silero-vad", "silero_vad", onnx=True)
+vad_model_url = "https://raw.githubusercontent.com/snakers4/silero-vad/refs/heads/master/src/silero_vad/data/silero_vad.onnx"
 
 
 class VADIterator:
@@ -32,33 +32,42 @@ class VADIterator:
 
     def __init__(
         self,
-        model,
+        model_path: str = load_model("silero_vad", vad_model_url),
         threshold: float = 0.5,
         sample_rate: int = 16000,
         min_silence_duration_ms: int = 500,
         speech_pad_ms: int = 30,
     ):
-        self.model = model
         self.threshold = threshold
-        self.sample_rate = sample_rate
 
         if sample_rate not in [8000, 16000]:
             raise ValueError(
                 "VADIterator does not support sampling rates other than [8000, 16000]"
             )
+        self.sample_rate = np.array(sample_rate).astype(np.int64)
+
+        # Initialize the ONNX model
+        sessionOptions = ort.SessionOptions()
+        sessionOptions.inter_op_num_threads = 1
+        sessionOptions.intra_op_num_threads = 1
+
+        self.model = ort.InferenceSession(
+            model_path, sess_options=sessionOptions, providers=["CPUExecutionProvider"]
+        )
+
+        self._state = np.zeros((2, 1, 128)).astype("float32")
 
         self.min_silence_samples = sample_rate * min_silence_duration_ms / 1000
         self.speech_pad_samples = sample_rate * speech_pad_ms / 1000
+
         self.reset_states()
         self.audio_chunks = []
 
     def reset_states(self):
-        self.model.reset_states()
         self.triggered = False
         self.temp_end = 0
         self.current_sample = 0
 
-    @torch.no_grad()
     def __call__(self, x: bytes) -> Optional[VADStatus]:
         """
         x: bytes
@@ -68,15 +77,18 @@ class VADIterator:
         x_np_f32 = (
             np.frombuffer(x, dtype=np.int16).astype(np.float32, order="C") / 32768
         )
-
-        x_tensor = torch.from_numpy(x_np_f32)
-
-        x_tensor = x_tensor.squeeze(1) if x_tensor.dim() == 2 else x_tensor
-
-        window_size_samples = len(x_tensor)
+        window_size_samples = x_np_f32.shape[0]
         self.current_sample += window_size_samples
 
-        speech_prob = self.model(x_tensor, self.sample_rate).item()
+        ort_inputs = {
+            "input": x_np_f32[None,],
+            "state": self._state,
+            "sr": self.sample_rate,
+        }
+
+        out, self._state = self.model.run(None, ort_inputs)
+
+        speech_prob = out[0][0]
 
         if (speech_prob >= self.threshold) and self.temp_end:
             self.temp_end = 0
