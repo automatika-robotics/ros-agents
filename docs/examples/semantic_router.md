@@ -47,6 +47,7 @@ goto = LLM(
     model_client=llama_client,
     db_client=chroma_client,
     trigger=goto_in,
+    config=config,
     component_name='go_to_x'
 )
 
@@ -180,6 +181,7 @@ goto = LLM(
     model_client=llama_client,
     db_client=chroma_client,  # check the previous example where we setup this database client
     trigger=goto_in,
+    config=config,
     component_name='go_to_x'
 )
 
