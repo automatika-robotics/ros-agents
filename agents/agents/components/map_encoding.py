@@ -73,8 +73,8 @@ class MapEncoding(Component):
     ):
         self.config: MapConfig = config
         self.allowed_inputs = {
-            "Required": [String, Odometry, OccupancyGrid],
-            "Optional": [Detections],
+            "Required": [Odometry, OccupancyGrid],
+            "Optional": [String, Detections],
         }
         self.db_client = db_client
 

@@ -244,7 +244,7 @@ layer2 = MapLayer(subscribes_to=introspection_answer, resolution_multiple=3)
 
 # Initialize mandatory topics defining the robots localization in space
 position = Topic(name="odom", msg_type="Odometry")
-map_meta_data = Topic(name="map_meta_data", msg_type="MapMetaData")
+map_topic = Topic(name="map", msg_type="OccupancyGrid")
 
 # Initialize a vector DB that will store our semantic map
 chroma = ChromaDB(name="MainDB")
@@ -255,7 +255,7 @@ map_conf = MapConfig(map_name="map")  # We give our map a name
 map = MapEncoding(
     layers=[layer1, layer2],
     position=position,
-    map_meta_data=map_meta_data,
+    map_topic=map_topic,
     config=map_conf,
     db_client=chroma_client,
     trigger=15.0,
