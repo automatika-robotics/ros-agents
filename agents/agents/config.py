@@ -209,42 +209,64 @@ class SpeechToTextConfig(ModelComponentConfig):
 
     This class defines the configuration options for a Speech-To-Text component.
 
-    :param enable_vad: Enable Voice Activity Detection (VAD) to identify when speech is present in continuous input stream from an input audio device. Uses silero-vad model and requires, PyTorch to be installed.
+    :param enable_vad: Enable Voice Activity Detection (VAD) to identify when speech is present in continuous input stream from an input audio device. Uses silero-vad model and requires onnxruntime to be installed.
                        Defaults to False.
     :type enable_vad: bool
-    :param device: Device id (int) or name (sub-string) to use for audio input.
-                   Only effective if enable_vad is set to true. Defaults to 'default'.
-    :type device: Union[int, str]
-    :param sample_rate: Sample rate of the audio stream in Hz. Must be 8000 or 16000.
-                        Only effective if enable_vad is set to true. Default is 16000.
-    :type sample_rate: int
-    :param threshold: Minimum threshold above which speech is considered present.
-                      Only effective if enable_vad is set to true. Defaults to 0.5 (50%).
-    :type threshold: float
-    :param min_silence_duration_ms: Minimum duration of silence in milliseconds before
-                                     considering it as a speaker pause. Only effective if enable_vad is set to true. Defaults to 500 ms.
+    :param enable_wakeword: Enable Wakeword Detection to identify a specific key phrase in the audio stream, e.g 'Hey Jarvis'.
+                            Defaults to False.
+    :type enable_wakeword: bool
+    :param device_audio: Device id (int) to use for audio input. Only effective if `enable_vad` is set to true. Defaults to 0.
+    :type device_audio: int
+    :param vad_threshold: Minimum threshold above which speech is considered present. Only effective if `enable_vad` is set to true. Defaults to 0.5 (50%).
+    :type vad_threshold: float
+    :param wakeword_threshold: Minimum threshold for detecting the wake word phrase. Only effective if `enable_wakeword` is set to true. Defaults to 0.6 (60%).
+    :type wakeword_threshold: float
+    :param min_silence_duration_ms: Minimum duration of silence in milliseconds before considering it as a speaker pause. Only effective if `enable_vad` is set to true. Defaults to 1000 ms.
     :type min_silence_duration_ms: int
-    :param speech_pad_ms: Duration in milliseconds to pad silence at the start and end
-                           of detected speech regions. Only effective if enable_vad is set to true. Defaults to 30 ms.
+    :param speech_pad_ms: Duration in milliseconds to pad silence at the start and end of detected speech regions. Only effective if `enable_vad` is set to true. Defaults to 30 ms.
+    :type speech_pad_ms: int
+    :param speech_buffer_max_len: Maximum length of the speech buffer in milliseconds. Defaults to 8000ms. Only effective if `enable_vad` is set to true.
+    :type speech_buffer_max_len: int
+    :param device_vad: Device type for VAD processing ('cpu' or 'gpu'). Only effective if `enable_vad` is set to true. Defaults to 'cpu'.
+    :type device_vad: str
+    :param device_wakeword: Device type for Wakeword detection ('cpu' or 'gpu'). Only effective if `enable_wakeword` is set to true. Defaults to 'cpu'.
+    :type device_wakeword: str
+    :param ncpu_vad: Number of CPU cores to use for VAD processing. Only effective if `device_vad` is 'cpu'. Defaults to 1.
+    :type ncpu_vad: int
+    :param ncpu_wakeword: Number of CPU cores to use for Wakeword detection. Only effective if `device_wakeword` is 'cpu'. Defaults to 1.
+    :type ncpu_wakeword: int
+    :param vad_model_path: File path or URL to the VAD model file. Defaults to the URL for Silero VAD ONNX model.
+    :type vad_model_path: str
+    :param melspectrogram_model_path: File path or URL to the melspectrogram model file used by the Wakeword detection. Defaults to the URL for melspectrogram ONNX model provided by openWakeWord.
+    :type melspectrogram_model_path: str
+    :param embedding_model_path: File path or URL to the audio embedding model file used by the Wakeword detection. Defaults to the URL for embedding ONNX model provided by openWakeWord, which is a reimplmentation of audio embeddings model provided by Google. License Apache-2.0.
+    :type embedding_model_path: str
+    :param wakeword_model_path: File path or URL to the Wakeword model file. Defaults to the URL for pretrained 'Hey Jarvis' wakeword ONNX model provided by openWakeWord. To train your custom wakeword model, follow the [tutorial](https://github.com/dscripka/openWakeWord/blob/main/notebooks/automatic_model_training.ipynb) provided by openWakeWord.
+    :type wakeword_model_path: str
 
     Example of usage:
     ```python
     config = SpeechToTextConfig(
         enable_vad=True,
-        device="my_device",
-        sample_rate=16000,
-        threshold=0.5,
-        min_silence_duration_ms=500,
+        enable_wakeword=True,
+        device_audio=1,
+        vad_threshold=0.5,
+        wakeword_threshold=0.6,
+        min_silence_duration_ms=1000,
         speech_pad_ms=30,
+        speech_buffer_max_len=8000,
     )
-    ```
     """
 
     enable_vad: bool = field(default=False)
     enable_wakeword: bool = field(default=False)
-    device: Union[int, str] = field(default="default")
-    vad_threshold: float = field(default=0.5)
-    wakeword_threshold: float = field(default=0.6)
+    device_audio: int = field(default=0)
+    vad_threshold: float = field(
+        default=0.5, validator=base_validators.in_range(min_value=0.0, max_value=1.0)
+    )
+    wakeword_threshold: float = field(
+        default=0.6, validator=base_validators.in_range(min_value=0.0, max_value=1.0)
+    )
     min_silence_duration_ms: int = field(default=1000)
     speech_pad_ms: int = field(default=30)
     speech_buffer_max_len: int = field(default=8000)
