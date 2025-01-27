@@ -52,6 +52,7 @@ class MapEncoding(Component):
         map_topic=map_topic,
         config=config,
         db_client=db_client,
+        component_name="semantic_map"
     )
     ```
     """
@@ -66,14 +67,14 @@ class MapEncoding(Component):
         config: MapConfig,
         db_client: DBClient,
         trigger: Union[Topic, List[Topic], float] = 10.0,
+        component_name: str,
         callback_group=None,
-        component_name="map_encoder_component",
         **kwargs,
     ):
         self.config: MapConfig = config
         self.allowed_inputs = {
-            "Required": [String, Odometry, OccupancyGrid],
-            "Optional": [Detections],
+            "Required": [Odometry, OccupancyGrid],
+            "Optional": [String, Detections],
         }
         self.db_client = db_client
 
@@ -243,9 +244,9 @@ class MapEncoding(Component):
             trigger = kwargs.get("topic")
             if not trigger:
                 return
-            self.get_logger().info(f"Received trigger of {trigger.name}")
+            self.get_logger().debug(f"Received trigger of {trigger.name}")
         else:
-            self.get_logger().info(f"Sending at {time_stamp}")
+            self.get_logger().debug(f"Sending at {time_stamp}")
 
         # process position and meta data inputs
         position = self.callbacks[self.position.name].get_output()

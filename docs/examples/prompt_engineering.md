@@ -74,6 +74,7 @@ mllm = MLLM(
     outputs=[text_answer],
     model_client=idefics_client,
     trigger=text_query,
+    component_name="mllm_component"
 )
 ```
 Next we will setup a component level prompt to ensure that our text query and the output of the detections topic are sent to the model as we intend. We will do this by passing a jinja2 template to the **set_component_prompt** function.
@@ -142,6 +143,7 @@ mllm = MLLM(
     outputs=[text_answer],
     model_client=idefics_client,
     trigger=text_query,
+    component_name="mllm_component"
 )
 
 mllm.set_component_prompt(

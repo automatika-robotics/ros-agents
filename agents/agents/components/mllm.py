@@ -60,8 +60,8 @@ class MLLM(LLM):
         config: Optional[MLLMConfig] = None,
         db_client: Optional[DBClient] = None,
         trigger: Union[Topic, List[Topic], float] = 1.0,
+        component_name: str,
         callback_group=None,
-        component_name: str = "mllm_component",
         **kwargs,
     ):
         self.allowed_inputs = {"Required": [String, Image], "Optional": [Detections]}

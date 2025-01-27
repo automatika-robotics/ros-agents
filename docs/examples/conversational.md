@@ -9,9 +9,19 @@ from agents.components import MLLM, SpeechToText, TextToSpeech
  [Components](../basics) are basic functional units in ROS Agents. Their inputs and outputs are defined using ROS [Topics](../basics). And their function can be any input transformation, for example the inference of an ML model. Lets setup these components one by one. Since our input to the robot would be speech, we will setup the speech-to-text component first.
 
  ## SpeechToText Component
- This component listens to input an audio input topic, that takes in a multibyte array of audio (captured in a ROS std_msgs message, which maps to Audio msg_type in ROS Sugar) and can publish output to a text topic. It can also be configured to get the audio stream from microphones on board our robot. With this configuration the component is always listening and uses a small Voice Activity Detection (VAD) model, [Silero-VAD](https://github.com/snakers4/silero-vad) to filter out any audio that is not speech. We will be using this configuration in our example. First we will setup our input and output topics and then create a config object which we can later pass to our component.
+ This component listens to input an audio input topic, that takes in a multibyte array of audio (captured in a ROS std_msgs message, which maps to Audio msg_type in ROS Sugar) and can publish output to a text topic. It can also be configured to get the audio stream from microphones on board our robot. By default the component is configured to use a small Voice Activity Detection (VAD) model, [Silero-VAD](https://github.com/snakers4/silero-vad) to filter out any audio that is not speech.
+
+ However, merely utilizing speech can be problamatic in robots, due to the hands free nature of the audio system. Therefore its useful to add wakeword detection, so that speech-to-text is only activated when the robot is called with a specific phrase (e.g. 'Hey Jarvis').
+
+ We will be using this configuration in our example. First we will setup our input and output topics and then create a config object which we can later pass to our component.
 
 
+```{note}
+With **enable_vad** set to **True**, the component automatically downloads and deploys [Silero-VAD](https://github.com/snakers4/silero-vad) by default in ONNX format. This model has a small footprint and can be easily deployed on the edge. However we need to install a couple of dependencies for this to work. These can be installed with: `pip install pyaudio onnxruntime`
+```
+```{note}
+With **enable_wakeword** set to **True**, the component automatically downloads and deploys a pre-trained model from [openWakeWord](https://github.com/dscripka/openWakeWord) by default in ONNX format, that can be invoked with **'Hey Jarvis'**. Other pre-trained models from openWakeWord are available [here](https://github.com/dscripka/openWakeWord). However it is recommended that you deploy own wakeword model, which can be easily trained by following [this amazing tutorial](https://github.com/dscripka/openWakeWord/blob/main/notebooks/automatic_model_training.ipynb). The tutorial notebook can be run in [Google Colab](https://colab.research.google.com/drive/1yyFH-fpguX2BTAW8wSQxTrJnJTM-0QAd?usp=sharing).
+```
 ```python
 from agents.ros import Topic
 from agents.config import SpeechToTextConfig
@@ -20,10 +30,14 @@ from agents.config import SpeechToTextConfig
 audio_in = Topic(name="audio0", msg_type="Audio")
 text_query = Topic(name="text0", msg_type="String")
 
-s2t_config = SpeechToTextConfig(enable_vad=True)  # option to always listen for speech through the microphone
+s2t_config = SpeechToTextConfig(enable_vad=True,     # option to listen for speech through the microphone
+                                enable_wakeword=True) # option to invoke the component with a wakeword like 'hey jarvis'
 ```
-```{note}
-With **enable_vad** set to **True**, the component automatically deploys [Silero-VAD](https://github.com/snakers4/silero-vad) by default in ONNX format. This model has a small footprint and can be easily deployed on the edge. However we need to install a couple of dependencies for this to work. These can be installed with: `pip install pyaudio torchaudio onnxruntime`
+```{warning}
+The _enable_wakeword_ option cannot be enabled without the _enable_vad_ option.
+```
+```{seealso}
+Check the available defaults and options for the SpeechToTextConfig [here](../apidocs/agents/agents.config)
 ```
 
 To initialize the component we also need a model client for a speech to text model. We will be using the HTTP client for RoboML for this purpose.
@@ -48,7 +62,8 @@ speech_to_text = SpeechToText(
     outputs=[text_query], # the output topic we setup
     model_client=roboml_whisper,
     trigger=audio_in,
-    config=s2t_config  # pass in the config object
+    config=s2t_config,  # pass in the config object
+    component_name="speech_to_text"
 )
 ```
 The trigger parameter lets the component know that it has to perform its function (in this case model inference) when an input is received on this particular topic. In our configuration, the component will be triggered using voice activity detection on the continuous stream of audio being received on the microphone. Next we will setup our MLLM component.
@@ -113,7 +128,8 @@ text_to_speech = TextToSpeech(
     inputs=[text_answer],
     trigger=text_answer,
     model_client=roboml_speecht5,
-    config=t2s_config
+    config=t2s_config,
+    component_name="text_to_speech"
 )
 ```
 ## Launching the Components
@@ -148,12 +164,16 @@ text_query = Topic(name="text0", msg_type="String")
 whisper = Whisper(name="whisper")  # Custom model init params can be provided here
 roboml_whisper = HTTPModelClient(whisper)
 
+s2t_config = SpeechToTextConfig(enable_vad=True,     # option to listen for speech through the microphone
+                                enable_wakeword=True  # option to invoke the component with a wakeword like 'hey jarvis'
+                               )
 speech_to_text = SpeechToText(
     inputs=[audio_in],
     outputs=[text_query],
     model_client=roboml_whisper,
     trigger=audio_in,
-    config=SpeechToTextConfig(enable_vad=True)  # option to always listen for speech through the microphone
+    config=s2t_config,
+    component_name="speech_to_text"
 )
 
 image0 = Topic(name="image_raw", msg_type="Image")
@@ -179,7 +199,8 @@ text_to_speech = TextToSpeech(
     inputs=[text_answer],
     trigger=text_answer,
     model_client=roboml_speecht5,
-    config=t2s_config
+    config=t2s_config,
+    component_name="text_to_speech"
 )
 
 launcher = Launcher()

@@ -44,6 +44,7 @@ class VideoMessageMaker(Component):
         inputs=[image_topic],
         outputs=[video_topic],
         config=config,
+        component_name="video_message_maker",
     )
     ```
     """
@@ -56,8 +57,8 @@ class VideoMessageMaker(Component):
         outputs: List[Topic],
         config: Optional[VideoMessageMakerConfig] = None,
         trigger: Union[Topic, List[Topic]],
+        component_name: str,
         callback_group=None,
-        component_name: str = "video_maker_component",
         **kwargs,
     ):
         if isinstance(trigger, float):
@@ -161,7 +162,7 @@ class VideoMessageMaker(Component):
             and (not self._capture)
             and len(self._frames) >= self.config.min_video_frames
         ):
-            self.get_logger().info(f"Sending out video of {len(self._frames)} frames")
+            self.get_logger().debug(f"Sending out video of {len(self._frames)} frames")
             for publisher in self.publishers_dict.values():
                 publisher.publish(output=self._frames)
             self._frames = []

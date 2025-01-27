@@ -11,14 +11,17 @@ text_query = Topic(name="text0", msg_type="String")
 whisper = Whisper(name="whisper")  # Custom model init params can be provided here
 roboml_whisper = HTTPModelClient(whisper)
 
+s2t_config = SpeechToTextConfig(
+    enable_vad=True,  # option to listen for speech through the microphone
+    enable_wakeword=True,  # option to invoke the component with a wakeword like 'hey jarvis'
+)
 speech_to_text = SpeechToText(
     inputs=[audio_in],
     outputs=[text_query],
     model_client=roboml_whisper,
     trigger=audio_in,
-    config=SpeechToTextConfig(
-        enable_vad=True
-    ),  # option to always listen for speech through the microphone
+    config=s2t_config,
+    component_name="speech_to_text",
 )
 
 image0 = Topic(name="image_raw", msg_type="Image")
@@ -45,6 +48,7 @@ text_to_speech = TextToSpeech(
     trigger=text_answer,
     model_client=roboml_speecht5,
     config=t2s_config,
+    component_name="text_to_speech",
 )
 
 launcher = Launcher()

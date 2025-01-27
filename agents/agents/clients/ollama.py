@@ -129,15 +129,20 @@ class OllamaClient(ModelClient):
         # make result part of the input
         if output := ollama_result["message"].get("content"):
             input["output"] = output  # type: ignore
+            # if tool calls exist
+            if tool_calls := ollama_result["message"].get("tool_calls"):  # type: ignore
+                input["tool_calls"] = tool_calls
+            return input
         else:
+            # if tool calls exist
+            if tool_calls := ollama_result["message"].get("tool_calls"):  # type: ignore
+                input["output"] = ""  # Add empty output for tool calls
+                input["tool_calls"] = tool_calls
+                return input
+
+            # no output or tool calls
             self.logger.debug("Output not received")
             return
-
-        # if tool calls exist
-        if tool_calls := ollama_result["message"].get("tool_calls"):  # type: ignore
-            input["tool_calls"] = tool_calls
-
-        return input
 
     def _deinitialize(self):
         """Deinitialize the model on the platform"""

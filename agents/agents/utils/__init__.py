@@ -6,6 +6,8 @@ from .utils import (
     get_prompt_template,
     encode_arr_base64,
     VADStatus,
+    WakeWordStatus,
+    load_model,
 )
 
 __all__ = [
@@ -16,4 +18,6 @@ __all__ = [
     "get_prompt_template",
     "encode_arr_base64",
     "VADStatus",
+    "WakeWordStatus",
+    "load_model",
 ]

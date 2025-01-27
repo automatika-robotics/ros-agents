@@ -33,6 +33,7 @@ mllm = MLLM(
     outputs=[text_answer],
     model_client=idefics_client,
     trigger=text_query,
+    component_name="mllm_component",
 )
 
 mllm.set_component_prompt(

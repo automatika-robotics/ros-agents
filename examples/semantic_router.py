@@ -45,6 +45,7 @@ goto = LLM(
     model_client=llama_client,
     db_client=chroma_client,  # check the previous example where we setup this database client
     trigger=goto_in,
+    config=config,
     component_name="go_to_x",
 )
 
@@ -108,6 +109,7 @@ router = SemanticRouter(
     default_route=llm_route,  # If none of the routes fall within a distance threshold
     config=router_config,
     db_client=chroma_client,  # reusing the db_client from the previous example
+    component_name="router",
 )
 
 # Launch the components

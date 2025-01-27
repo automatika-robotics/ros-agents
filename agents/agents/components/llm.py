@@ -73,8 +73,8 @@ class LLM(ModelComponent):
         config: Optional[LLMConfig] = None,
         db_client: Optional[DBClient] = None,
         trigger: Union[Topic, List[Topic], float] = 1.0,
+        component_name: str,
         callback_group=None,
-        component_name: str = "llm_component",
         **kwargs,
     ):
         self.config: LLMConfig = config or LLMConfig()
@@ -354,10 +354,10 @@ class LLM(ModelComponent):
             trigger = kwargs.get("topic")
             if not trigger:
                 return
-            self.get_logger().info(f"Received trigger on topic {trigger.name}")
+            self.get_logger().debug(f"Received trigger on topic {trigger.name}")
         else:
             time_stamp = self.get_ros_time().sec
-            self.get_logger().info(f"Sending at {time_stamp}")
+            self.get_logger().debug(f"Sending at {time_stamp}")
 
         # create inference input
         inference_input = self._create_input(*args, **kwargs)

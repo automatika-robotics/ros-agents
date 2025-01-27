@@ -18,10 +18,13 @@ from typing import (
 )
 
 import cv2
+import httpx
 import numpy as np
 from attrs import Attribute
 from jinja2 import Environment, FileSystemLoader
 from jinja2.environment import Template
+from tqdm import tqdm
+from platformdirs import user_cache_dir
 from .pluralize import pluralize
 
 
@@ -54,7 +57,12 @@ def get_prompt_template(template: Union[str, Path]) -> Template:
     :type template: str | Path
     :rtype: None
     """
-    if Path(template).exists():
+    # check if prompt is a filename
+    try:
+        path_exists = Path(template).exists()
+    except OSError:
+        path_exists = False
+    if path_exists:
         try:
             env = Environment(
                 loader=FileSystemLoader(Path(template).parent), autoescape=True
@@ -199,7 +207,59 @@ class VADStatus(Enum):
     """VAD Status for start and end of detected speech"""
 
     START = 0
-    END = 1
+    ONGOING = 1
+    END = 2
+
+
+class WakeWordStatus(Enum):
+    """WakeWord Status for start and end of detected wake word"""
+
+    START = 0
+    ONGOING = 1
+    END = 2
+
+
+def load_model(model_name: str, model_path: str) -> str:
+    cachedir = user_cache_dir("ros_agents")
+    model_full_path = Path(cachedir) / Path("models") / Path(f"{model_name}.onnx")
+
+    # create cache dir
+    model_full_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # return if a file path is provided
+    if Path(model_path).exists():
+        return str(model_path)
+
+    # check for cached model
+    elif model_full_path.is_file():
+        return str(model_full_path)
+
+    else:
+        # assume model path is a url open stream
+        with httpx.stream("GET", model_path, timeout=20, follow_redirects=True) as r:
+            r.raise_for_status()
+            total_size = int(r.headers.get("content-length", 0))
+            progress_bar = tqdm(
+                total=total_size, unit="iB", unit_scale=True, desc=f"{model_name}"
+            )
+            # delete the file if an exception occurs while downloadin
+            try:
+                with open(model_full_path, "wb") as f:
+                    for chunk in r.iter_bytes(chunk_size=1024):
+                        f.write(chunk)
+                        progress_bar.update(len(chunk))
+            except Exception:
+                import logging
+
+                logging.error(
+                    f"Error occured while downloading model {model_name} from given url. Try restarting your components."
+                )
+                if model_full_path.exists():
+                    model_full_path.unlink()
+                raise
+
+    progress_bar.close()
+    return str(model_full_path)
 
 
 class PDFReader:
