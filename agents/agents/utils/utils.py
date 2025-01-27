@@ -207,32 +207,59 @@ class VADStatus(Enum):
     """VAD Status for start and end of detected speech"""
 
     START = 0
-    END = 1
+    ONGOING = 1
+    END = 2
 
 
-def load_model(model_name: str, url: str) -> str:
+class WakeWordStatus(Enum):
+    """WakeWord Status for start and end of detected wake word"""
+
+    START = 0
+    ONGOING = 1
+    END = 2
+
+
+def load_model(model_name: str, model_path: str) -> str:
     cachedir = user_cache_dir("ros_agents")
-    model_path = Path(cachedir) / Path("models") / Path(f"{model_name}.onnx")
+    model_full_path = Path(cachedir) / Path("models") / Path(f"{model_name}.onnx")
 
     # create cache dir
-    model_path.parent.mkdir(parents=True, exist_ok=True)
+    model_full_path.parent.mkdir(parents=True, exist_ok=True)
 
-    if model_path.is_file():
+    # return if a file path is provided
+    if Path(model_path).exists():
         return str(model_path)
+
+    # check for cached model
+    elif model_full_path.is_file():
+        return str(model_full_path)
+
     else:
-        with httpx.stream("GET", url, timeout=20) as r:
+        # assume model path is a url open stream
+        with httpx.stream("GET", model_path, timeout=20, follow_redirects=True) as r:
             r.raise_for_status()
             total_size = int(r.headers.get("content-length", 0))
             progress_bar = tqdm(
                 total=total_size, unit="iB", unit_scale=True, desc=f"{model_name}"
             )
-            with open(model_path, "wb") as f:
-                for chunk in r.iter_bytes(chunk_size=1024):
-                    f.write(chunk)
-                    progress_bar.update(len(chunk))
+            # delete the file if an exception occurs while downloadin
+            try:
+                with open(model_full_path, "wb") as f:
+                    for chunk in r.iter_bytes(chunk_size=1024):
+                        f.write(chunk)
+                        progress_bar.update(len(chunk))
+            except Exception:
+                import logging
+
+                logging.error(
+                    f"Error occured while downloading model {model_name} from given url. Try restarting your components."
+                )
+                if model_full_path.exists():
+                    model_full_path.unlink()
+                raise
 
     progress_bar.close()
-    return str(model_path)
+    return str(model_full_path)
 
 
 class PDFReader:
