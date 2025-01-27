@@ -241,17 +241,42 @@ class SpeechToTextConfig(ModelComponentConfig):
     """
 
     enable_vad: bool = field(default=False)
+    enable_wakeword: bool = field(default=False)
     device: Union[int, str] = field(default="default")
-    sample_rate: int = field(
-        default=16000, validator=base_validators.in_([8000, 16000])
-    )
-    threshold: float = field(default=0.5)
-    min_silence_duration_ms: int = field(default=500)
+    vad_threshold: float = field(default=0.5)
+    wakeword_threshold: float = field(default=0.6)
+    min_silence_duration_ms: int = field(default=1000)
     speech_pad_ms: int = field(default=30)
-    block_size: int = field(init=False)
+    speech_buffer_max_len: int = field(default=8000)
+    device_vad: str = field(
+        default="cpu", validator=base_validators.in_(["cpu", "gpu"])
+    )
+    device_wakeword: str = field(
+        default="cpu", validator=base_validators.in_(["cpu", "gpu"])
+    )
+    ncpu_vad: int = field(default=1)
+    ncpu_wakeword: int = field(default=1)
+    vad_model_path: str = field(
+        default="https://raw.githubusercontent.com/snakers4/silero-vad/refs/heads/master/src/silero_vad/data/silero_vad.onnx"
+    )
+    melspectrogram_model_path: str = field(
+        default="https://github.com/dscripka/openWakeWord/releases/download/v0.5.1/melspectrogram.onnx"
+    )
+    embedding_model_path: str = field(
+        default="https://github.com/dscripka/openWakeWord/releases/download/v0.5.1/embedding_model.onnx"
+    )
+    wakeword_model_path: str = field(
+        default="https://github.com/dscripka/openWakeWord/releases/download/v0.5.1/hey_jarvis_v0.1.onnx"
+    )
+    _sample_rate: int = field(default=16000)
+    _block_size: int = field(default=1280)
 
-    def __attrs_post_init__(self):
-        self.block_size = 640 if self.sample_rate == 16000 else 320
+    @enable_wakeword.validator
+    def check_wakeword(self, _, value):
+        if value and not self.enable_vad:
+            raise ValueError(
+                "enable_vad (voice activity detection) must be set to True when enable_wakeword is True"
+            )
 
     def _get_inference_params(self) -> Dict:
         """get_inference_params.
