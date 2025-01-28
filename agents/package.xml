@@ -11,8 +11,6 @@
   <depend>std_msgs</depend>
   <depend>sensor_msgs</depend>
   <depend>python3-tqdm</depend>
-  <depend>python3-platformdirs</depend>
-  <depend>python3-httpx</depend>
   <depend>automatika_ros_sugar</depend>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
