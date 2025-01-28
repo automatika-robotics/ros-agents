@@ -2,8 +2,8 @@
 Changelog for package automatika_embodied_agents
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.3.3 (2025-01-28)
+------------------
 * (fix) Removes python dependencies from package manifest until package names merged in rosdistro
 * Contributors: ahr
 
