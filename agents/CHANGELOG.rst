@@ -2,8 +2,8 @@
 Changelog for package automatika_embodied_agents
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.3.2 (2025-01-28)
+------------------
 * (docs) Updates docs for conversational agent and SpeechToTextConfig
 * (feature) Adds vad, audio feautres and wakeword classification classes based local onnx models
 * (feature) Adds utility function for downloading models and status classes for speech processing
