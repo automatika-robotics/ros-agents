@@ -2,6 +2,11 @@
 Changelog for package automatika_embodied_agents
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* (fix) Removes python dependencies from package manifest until package names merged in rosdistro
+* Contributors: ahr
+
 0.3.2 (2025-01-28)
 ------------------
 * (docs) Updates docs for conversational agent and SpeechToTextConfig
