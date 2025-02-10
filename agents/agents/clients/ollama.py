@@ -66,17 +66,6 @@ class OllamaClient(ModelClient):
                 raise Exception(
                     f"Could not pull model {self.model_init_params['checkpoint']}"
                 )
-            if sys_prompt := self.model_init_params.get("system_prompt"):
-                # create modelfile if a system prompt is given
-                modelfile = f'''FROM {self.model_init_params["checkpoint"]}
-    SYSTEM """
-    {sys_prompt}
-    """
-    '''
-                self.client.create(
-                    self.model_init_params["checkpoint"], modelfile=modelfile
-                )
-
             # load model in memory with empty request
             self.client.generate(
                 model=self.model_init_params["checkpoint"], keep_alive=10

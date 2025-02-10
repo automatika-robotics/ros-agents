@@ -70,14 +70,11 @@ class LLM(Model):
     :param name: An arbitrary name given to the model.
     :type name: str
     :param system_prompt: The system prompt used to initialize the model. If not provided, defaults to None.
-    :type system_prompt: str or None
-    :param quantization: The quantization scheme used by the model. Can be one of "4bit", "8bit" or None (default is "4bit").
     :type quantization: str or None
     :param init_timeout: The timeout in seconds for the initialization process. Defaults to None.
     :type init_timeout: int, optional
     """
 
-    system_prompt: Optional[str] = field(default=None)
     quantization: Optional[str] = field(
         default="4bit", validator=base_validators.in_(["4bit", "8bit", None])
     )
@@ -98,7 +95,6 @@ class LLM(Model):
         return {
             "checkpoint": self.checkpoint,
             "quantization": self.quantization,
-            "system_prompt": self.system_prompt,
         }
 
 

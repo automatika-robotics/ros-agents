@@ -95,7 +95,12 @@ class LLM(ModelComponent):
             if self.config._component_prompt
             else None
         )
-        self.messages: List[Dict] = []
+
+        self.messages: List[Dict] = (
+            [{"role": "system", "content": self.config._system_prompt}]
+            if self.config._system_prompt
+            else []
+        )
 
         super().__init__(
             inputs,
@@ -112,6 +117,12 @@ class LLM(ModelComponent):
         # configure the rest
         super().custom_on_configure()
 
+        # add system prompt if set after init
+        self.messages: List[Dict] = (
+            [{"role": "system", "content": self.config._system_prompt}]
+            if self.config._system_prompt
+            else []
+        )
         # add component prompt if set after init
         self.component_prompt = (
             get_prompt_template(self.config._component_prompt)
@@ -206,14 +217,24 @@ class LLM(ModelComponent):
     def _handle_chat_history(self, message: Dict) -> None:
         """Internal handler for chat history"""
         if not self.config.chat_history:
-            self.messages = [message]
+            # keep system prompt if set else empty the list
+            self.messages = self.messages[:1] if self.config._system_prompt else []
         else:
-            self.messages.append(message)
-
             # if the size of history exceeds specified size than take out first
-            # two messages
-            if len(self.messages) / 2 > self.config.history_size:
-                self.messages = self.messages[2:]
+            # two messages (keeping system prompt if it exists)
+            messages_length = (
+                len(self.messages)
+                if not self.config._system_prompt
+                else len(self.messages) - 1
+            )
+            if messages_length / 2 > self.config.history_size + 1:
+                self.messages = (
+                    self.messages[2:]
+                    if not self.config._system_prompt
+                    else self.messages[:1] + self.messages[3:]
+                )
+
+        self.messages.append(message)
 
     def _handle_tool_calls(self, result: Dict) -> Optional[Dict]:
         """Internal handler for tool calling"""
@@ -407,7 +428,7 @@ class LLM(ModelComponent):
                             model_client=model_client,
                             config=config,
                             component_name='llama_component')
-        llm_component.set_topic_prompt(text0, template="You are an amazing and funny robot. You answer all questions with short and concise answers. Please answer the following: {{ text0 }}")
+        llm_component.set_topic_prompt(text0, template="Please answer the following: {{ text0 }}")
         ```
         """
         if callback := self.callbacks.get(input_topic.name):
@@ -433,10 +454,29 @@ class LLM(ModelComponent):
                             model_client=model_client,
                             config=config,
                             component_name='llama_component')
-        llm_component.set_component_prompt(template="You are an amazing and funny robot. You answer all questions with short and concise answers. You can see the following items: {{ detections }}. Please answer the following: {{ text0 }}")
+        llm_component.set_component_prompt(template="You can see the following items: {{ detections }}. Please answer the following: {{ text0 }}")
         ```
         """
         self.config._component_prompt = template
+
+    def set_system_prompt(self, prompt: str) -> None:
+        """Set system prompt for the model, which defines the models 'personality'.
+
+        :param prompt: string or a path to a file containing the string.
+        :type template: Union[str, Path]
+        :rtype: None
+
+        Example usage:
+        ```python
+        llm_component = LLM(inputs=[text0],
+                            outputs=[text1],
+                            model_client=model_client,
+                            config=config,
+                            component_name='llama_component')
+        llm_component.set_system_prompt(prompt="You are an amazing and funny robot. You answer all questions with short and concise answers.")
+        ```
+        """
+        self.config._system_prompt = prompt
 
     def register_tool(
         self,
