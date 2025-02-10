@@ -1,6 +1,6 @@
 """The following classes provide wrappers for data being transmitted via ROS topics. These classes form the inputs and outputs of [Components](agents.components.md)."""
 
-from typing import Union, Any, Dict, List
+from typing import Union, Any, Dict, List, Tuple
 import numpy as np
 from attrs import define, field, Factory
 
@@ -256,8 +256,8 @@ def _get_topic(topic: Union[Topic, Dict]) -> Topic:
 
 
 def _get_np_coordinates(
-    pre_defined: List[Union[List, tuple[np.ndarray, str]]],
-) -> List[Union[List, tuple[np.ndarray, str]]]:
+    pre_defined: List[Union[List, Tuple[np.ndarray, str]]],
+) -> List[Union[List, Tuple[np.ndarray, str]]]:
     pre_defined_list = []
     for item in pre_defined:
         pre_defined_list.append((np.array(item[0]), item[1]))
@@ -288,7 +288,7 @@ class MapLayer(BaseAttrs):
     resolution_multiple: int = field(
         default=1, validator=base_validators.in_range(min_value=0.1, max_value=10)
     )
-    pre_defined: List[Union[List, tuple[np.ndarray, str]]] = field(
+    pre_defined: List[Union[List, Tuple[np.ndarray, str]]] = field(
         default=Factory(list), converter=_get_np_coordinates
     )
 

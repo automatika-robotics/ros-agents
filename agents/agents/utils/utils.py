@@ -5,13 +5,11 @@ from functools import wraps
 from enum import Enum
 from io import BytesIO
 from pathlib import Path
-from types import GenericAlias, UnionType
 from typing import (
     List,
     Dict,
     Optional,
     Union,
-    _UnionGenericAlias,
     get_args,
     get_origin,
     _GenericAlias,
@@ -23,8 +21,6 @@ import numpy as np
 from attrs import Attribute
 from jinja2 import Environment, FileSystemLoader
 from jinja2.environment import Template
-from tqdm import tqdm
-from platformdirs import user_cache_dir
 from .pluralize import pluralize
 
 
@@ -119,14 +115,14 @@ def _check_type_from_signature(value, fn_param: inspect.Parameter) -> None:
     :rtype: None
     """
     # Handles only one layer of Union
-    if isinstance(fn_param.annotation, (_UnionGenericAlias, UnionType)):
+    if get_origin(fn_param.annotation) is Union:
         _annotated_types = get_args(fn_param.annotation)
     else:
         _annotated_types = [fn_param.annotation]
 
     # Handles only the origin of GenericAlias (dict, list)
     _annotated_types = [
-        get_origin(t) if isinstance(t, (GenericAlias, _GenericAlias)) else t
+        get_origin(t) if isinstance(t, _GenericAlias) else t
         for t in _annotated_types
     ]
 
@@ -220,6 +216,10 @@ class WakeWordStatus(Enum):
 
 
 def load_model(model_name: str, model_path: str) -> str:
+    """Model download utility function"""
+    from tqdm import tqdm
+    from platformdirs import user_cache_dir
+    
     cachedir = user_cache_dir("ros_agents")
     model_full_path = Path(cachedir) / Path("models") / Path(f"{model_name}.onnx")
 

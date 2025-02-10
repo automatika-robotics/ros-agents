@@ -1,4 +1,4 @@
-from typing import Any, Union, Optional, List, Dict
+from typing import Any, Union, Optional, List, Dict, Tuple
 import queue
 import threading
 import numpy as np
@@ -175,7 +175,7 @@ class SpeechToText(ModelComponent):
 
     def _stream_callback(
         self, indata: bytes, frames: int, _, status
-    ) -> tuple[bytes, int]:
+    ) -> Tuple[bytes, int]:
         """Stream callback function for processing audio
 
         :param indata:

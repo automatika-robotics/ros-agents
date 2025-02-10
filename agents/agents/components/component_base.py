@@ -108,7 +108,7 @@ class Component(BaseComponent):
             if callback._subscriber:
                 self.destroy_subscription(callback._subscriber)
 
-    def trigger(self, trigger: Union[Topic, list[Topic], float]) -> None:
+    def trigger(self, trigger: Union[Topic, List[Topic], float]) -> None:
         """
         Set component trigger
         """
@@ -144,7 +144,7 @@ class Component(BaseComponent):
     def validate_topics(
         self,
         topics: Sequence[Union[Topic, FixedInput]],
-        allowed_topic_types: Optional[Dict[str, List[type[SupportedType]]]] = None,
+        allowed_topic_types: Optional[Dict[str, List[type]]] = None,
         topics_direction: str = "Topics",
     ):
         """
