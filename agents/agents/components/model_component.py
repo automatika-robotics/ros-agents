@@ -1,7 +1,7 @@
 from abc import abstractmethod
 import inspect
 import json
-from typing import Any, Optional, Sequence, Union, List, Dict
+from typing import Any, Optional, Sequence, Union, List, Dict, Type
 
 from ..clients.model_base import ModelClient
 from ..config import ModelComponentConfig
@@ -26,7 +26,7 @@ class ModelComponent(Component):
         # setup model client
         self.model_client = model_client if model_client else None
 
-        self.handled_outputs: List[type[SupportedType]]
+        self.handled_outputs: List[Type[SupportedType]]
 
         if not config:
             self.config = ModelComponentConfig()

@@ -1,7 +1,7 @@
 import json
 from abc import abstractmethod
 from copy import deepcopy
-from typing import Optional, Sequence, Union, List, Dict
+from typing import Optional, Sequence, Union, List, Dict, Type
 
 from ..ros import BaseComponent, ComponentRunType, FixedInput, SupportedType, Topic
 from ..config import BaseComponentConfig
@@ -23,8 +23,8 @@ class Component(BaseComponent):
         self.config: BaseComponentConfig = (
             deepcopy(config) if config else BaseComponentConfig()
         )
-        self.allowed_inputs: Dict[str, List[type[SupportedType]]]
-        self.allowed_outputs: Dict[str, List[type[SupportedType]]]
+        self.allowed_inputs: Dict[str, List[Type[SupportedType]]]
+        self.allowed_outputs: Dict[str, List[Type[SupportedType]]]
 
         # setup inputs and outputs
         if inputs:
@@ -144,7 +144,7 @@ class Component(BaseComponent):
     def validate_topics(
         self,
         topics: Sequence[Union[Topic, FixedInput]],
-        allowed_topic_types: Optional[Dict[str, List[type]]] = None,
+        allowed_topic_types: Optional[Dict[str, List[Type[SupportedType]]]] = None,
         topics_direction: str = "Topics",
     ):
         """
