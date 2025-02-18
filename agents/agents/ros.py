@@ -17,7 +17,7 @@ from ros_sugar.supported_types import (
     ROSImage,
     ROSCompressedImage,
 )
-from ros_sugar.io import Topic
+from ros_sugar.io import Topic as BaseTopic
 
 from ros_sugar.config import (
     BaseComponentConfig,
@@ -223,6 +223,28 @@ agent_types = [Video, Detection, Detections, Tracking, Trackings]
 
 
 add_additional_datatypes(agent_types)
+
+
+@define(kw_only=True)
+class Topic(BaseTopic):
+    """
+    A topic is an idomatic wrapper for a ROS2 topic, Topics can be given as inputs or outputs to components. When given as inputs, components automatically create listeners for the topics upon their activation. And when given as outputs, components create publishers for publishing to the topic.
+
+    :param name: Name of the topic
+    :type name: str
+    :param msg_type: One of the SupportedTypes. This parameter can be set by passing the SupportedType data-type name as a string. See a list of supported types [here](https://automatika-robotics.github.io/ros-sugar/advanced/types.html)
+    :type msg_type: Union[type[supported_types.SupportedType], str]
+    :param qos_profile: QoS profile for the topic
+    :type qos_profile: QoSConfig
+
+    Example usage:
+    ```python
+    position = Topic(name="odom", msg_type="Odometry")
+    map_meta_data = Topic(name="map_meta_data", msg_type="MapMetaData")
+    ```
+    """
+
+    pass
 
 
 @define(kw_only=True)
