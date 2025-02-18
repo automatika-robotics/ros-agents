@@ -1,6 +1,6 @@
 """The following classes provide wrappers for data being transmitted via ROS topics. These classes form the inputs and outputs of [Components](agents.components.md)."""
 
-from typing import Union, Any, Dict, List
+from typing import Union, Any, Dict, List, Tuple
 import numpy as np
 from attrs import define, field, Factory
 
@@ -17,7 +17,7 @@ from ros_sugar.supported_types import (
     ROSImage,
     ROSCompressedImage,
 )
-from ros_sugar.io import Topic
+from ros_sugar.io import Topic as BaseTopic
 
 from ros_sugar.config import (
     BaseComponentConfig,
@@ -226,6 +226,28 @@ add_additional_datatypes(agent_types)
 
 
 @define(kw_only=True)
+class Topic(BaseTopic):
+    """
+    A topic is an idomatic wrapper for a ROS2 topic, Topics can be given as inputs or outputs to components. When given as inputs, components automatically create listeners for the topics upon their activation. And when given as outputs, components create publishers for publishing to the topic.
+
+    :param name: Name of the topic
+    :type name: str
+    :param msg_type: One of the SupportedTypes. This parameter can be set by passing the SupportedType data-type name as a string. See a list of supported types [here](https://automatika-robotics.github.io/ros-sugar/advanced/types.html)
+    :type msg_type: Union[type[supported_types.SupportedType], str]
+    :param qos_profile: QoS profile for the topic
+    :type qos_profile: QoSConfig
+
+    Example usage:
+    ```python
+    position = Topic(name="odom", msg_type="Odometry")
+    map_meta_data = Topic(name="map_meta_data", msg_type="MapMetaData")
+    ```
+    """
+
+    pass
+
+
+@define(kw_only=True)
 class FixedInput(Topic):
     """
     A FixedInput can be provided to components as input and is similar to a Topic except components do not create a subscriber to it and whenever they _read_ it, they always get the same data. The nature of the data depends on the _msg_type_ specified.
@@ -256,8 +278,8 @@ def _get_topic(topic: Union[Topic, Dict]) -> Topic:
 
 
 def _get_np_coordinates(
-    pre_defined: List[Union[List, tuple[np.ndarray, str]]],
-) -> List[Union[List, tuple[np.ndarray, str]]]:
+    pre_defined: List[Union[List, Tuple[np.ndarray, str]]],
+) -> List[Union[List, Tuple[np.ndarray, str]]]:
     pre_defined_list = []
     for item in pre_defined:
         pre_defined_list.append((np.array(item[0]), item[1]))
@@ -288,7 +310,7 @@ class MapLayer(BaseAttrs):
     resolution_multiple: int = field(
         default=1, validator=base_validators.in_range(min_value=0.1, max_value=10)
     )
-    pre_defined: List[Union[List, tuple[np.ndarray, str]]] = field(
+    pre_defined: List[Union[List, Tuple[np.ndarray, str]]] = field(
         default=Factory(list), converter=_get_np_coordinates
     )
 

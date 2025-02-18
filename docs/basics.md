@@ -36,7 +36,7 @@ Each component maintains a health status, based on which, one can configure vari
 
 ## Topic
 
-A topic is an idomatic wrapper for a ROS topic, which is essentially a pub/sub queue. Topics can be given as inputs or outputs to components. When given as inputs, components automatically create listeners for the topics upon their activation. And when given as outputs, components create publishers for publishing to the topic. Each topic has a name (duh?) and a data type, defining its listening callback and publishing behavior. The data type can be provided to the topic as a string. Checkout the list of supported data types [here](https://automatika-robotics.github.io/ros-sugar/advanced/types.html).
+A [topic](apidocs/agents/agents.ros) is an idomatic wrapper for a ROS2 topic. Topics can be given as inputs or outputs to components. When given as inputs, components automatically create listeners for the topics upon their activation. And when given as outputs, components create publishers for publishing to the topic. Each topic has a name (duh?) and a data type, defining its listening callback and publishing behavior. The data type can be provided to the topic as a string. Checkout the list of supported data types [here](https://automatika-robotics.github.io/ros-sugar/advanced/types.html).
 
 ```{note}
 Learn more about Topics in [ROS Sugar](https://automatika-robotics.github.io/ros-sugar/).

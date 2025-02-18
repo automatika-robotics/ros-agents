@@ -1,4 +1,4 @@
-from typing import Optional, Union, List, Dict
+from typing import Optional, Union, List, Dict, Tuple
 import json
 
 import numpy as np
@@ -120,7 +120,7 @@ class MapEncoding(Component):
     def _fill_out_pre_defined(
         self,
         layer: MapLayer,
-        points: Union[List[tuple[np.ndarray, str]], tuple[np.ndarray, str]],
+        points: Union[List[Tuple[np.ndarray, str]], Tuple[np.ndarray, str]],
     ) -> None:
         """Fill out any pre-defined points in the MapLayer.
 
@@ -173,7 +173,7 @@ class MapEncoding(Component):
 
     def _get_layer_data(
         self, time_stamp, map_coordinates
-    ) -> tuple[Optional[Dict[str, List]], Optional[Dict[str, List]]]:
+    ) -> Tuple[Optional[Dict[str, List]], Optional[Dict[str, List]]]:
         """
         Gathers data from listeners and creates input for a map DB
         :param agg_obj: The aggregator object
@@ -276,7 +276,7 @@ class MapEncoding(Component):
 
     def _get_map_coordinates(
         self, position: np.ndarray, map_meta_data: Dict
-    ) -> np.ndarray | None:
+    ) -> Optional[np.ndarray]:
         """
         Get coordinates from position and map meta data
         :param position: relative position in meters
@@ -307,7 +307,7 @@ class MapEncoding(Component):
         }
 
     @component_action
-    def add_point(self, layer: MapLayer, point: tuple[np.ndarray, str]) -> None:
+    def add_point(self, layer: MapLayer, point: Tuple[np.ndarray, str]) -> None:
         """Component action to add a user defined point to the map collection.
         This action can be executed on an event.
 

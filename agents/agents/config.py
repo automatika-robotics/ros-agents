@@ -67,10 +67,13 @@ class LLMConfig(ModelComponentConfig):
     n_results: int = field(default=1)
     add_metadata: bool = field(default=False)
     chat_history: bool = field(default=False)
-    history_reset_phrase: str = "chat reset"
-    history_size: int = 10  # number of user messages
+    history_reset_phrase: str = field(default="chat reset")
+    history_size: int = field(
+        default=10, validator=base_validators.gt(4)
+    )  # number of user messages
     temperature: float = field(default=0.8, validator=base_validators.gt(0.0))
     max_new_tokens: int = field(default=100, validator=base_validators.gt(0))
+    _system_prompt: Optional[str] = field(default=None, alias="_system_prompt")
     _component_prompt: Optional[Union[str, Path]] = field(
         default=None, alias="_component_prompt"
     )
