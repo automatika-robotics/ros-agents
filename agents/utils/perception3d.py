@@ -19,9 +19,9 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 import numpy as np
 from attrs import define, field
 
-_KOMPASS_MIN_VERSION = (0, 8, 4)
+_KOMPASS_MIN_VERSION = (0, 8, 5)
 _KOMPASS_INSTALL_HINT = (
-    "'kompass-core' >= 0.8.4 is required to lift 2D detections into 3D. "
+    "'kompass-core' >= 0.8.5 is required to lift 2D detections into 3D. "
     "Install it with: pip install 'kompass-core>=0.8.4'"
 )
 
